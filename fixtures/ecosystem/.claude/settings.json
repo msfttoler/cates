@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": ["Bash(npm test)", "Read(*)"],
+    "deny": ["Bash(rm -rf *)"]
+  }
+}
+

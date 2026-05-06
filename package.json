@@ -1,0 +1,58 @@
+{
+  "name": "cates-analyzer",
+  "version": "1.0.0",
+  "description": "Analyze coding agent configurations for token efficiency, security, and CATES conformance",
+  "type": "module",
+  "bin": {
+    "cates-analyzer": "./dist/cli/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/cli/index.ts",
+    "start": "node dist/cli/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src/ --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "cates": "tsx src/cli/index.ts",
+    "analyze": "tsx src/cli/index.ts analyze",
+    "review": "tsx src/cli/index.ts review"
+  },
+  "keywords": [
+    "cates",
+    "coding-agent",
+    "agent",
+    "analyzer",
+    "token-efficiency",
+    "security"
+  ],
+  "author": "Todd Toler",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "commander": "^13.1.0",
+    "js-tiktoken": "^1.0.18",
+    "yaml": "^2.7.1",
+    "zod": "^3.24.4",
+    "chalk": "^5.4.1",
+    "ora": "^8.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.3",
+    "tsx": "^4.19.4",
+    "@vitest/coverage-v8": "^3.1.3"
+  }
+}

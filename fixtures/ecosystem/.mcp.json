@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
+      "description": "Read repository files when the agent needs local project context."
+    }
+  }
+}
+

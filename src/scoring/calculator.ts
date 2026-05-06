@@ -1,0 +1,99 @@
+import type { Finding, Score, DimensionScore, Dimension, DiscoveryResult, AnalyzerOptions } from '../types.js';
+import { estimateMonthlyCost } from '../utils/tokenizer.js';
+
+const DIMENSION_WEIGHTS: Record<Dimension, number> = {
+  'security': 0.25,
+  'token-efficiency': 0.25,
+  'specificity': 0.15,
+  'completeness': 0.15,
+  'conflict-reachability': 0.10,
+  'harness-quality': 0.10,
+};
+
+const SEVERITY_DEDUCTIONS: Record<string, number> = {
+  'critical': 25,
+  'high': 15,
+  'medium': 8,
+  'low': 3,
+  'info': 0,
+};
+
+export function calculateScore(
+  findings: Finding[],
+  _discovery: DiscoveryResult,
+  options: AnalyzerOptions,
+): Score {
+  const dimensions: DimensionScore[] = [];
+
+  for (const [dimension, weight] of Object.entries(DIMENSION_WEIGHTS)) {
+    const dimFindings = findings.filter(f => f.dimension === dimension);
+    let score = 100;
+
+    for (const finding of dimFindings) {
+      score -= SEVERITY_DEDUCTIONS[finding.severity] ?? 0;
+    }
+
+    score = Math.max(0, Math.min(100, score));
+
+    dimensions.push({
+      dimension: dimension as Dimension,
+      score,
+      weight,
+      findings: dimFindings,
+      summary: getSummary(dimension as Dimension, score, dimFindings.length),
+    });
+  }
+
+  const overall = Math.round(
+    dimensions.reduce((sum, d) => sum + d.score * d.weight, 0)
+  );
+
+  const grade = getGrade(overall);
+  const criticalCount = findings.filter(f => f.severity === 'critical').length;
+
+  // Estimate monthly waste from token inefficiencies
+  const tokenWaste = findings
+    .filter(f => f.dimension === 'token-efficiency' && f.tokenImpact && f.tokenImpact > 0)
+    .reduce((sum, f) => sum + (f.tokenImpact ?? 0), 0);
+
+  const estimatedMonthlyTokenWaste = tokenWaste * options.assumedDailyInvocations * 22;
+  const estimatedMonthlyCostWaste = estimateMonthlyCost({
+    tokenCount: tokenWaste,
+    dailyInvocations: options.assumedDailyInvocations,
+    costPer1kTokens: options.assumedModelCostPer1kTokens,
+  });
+
+  return {
+    overall,
+    grade,
+    dimensions,
+    totalFindings: findings.length,
+    criticalCount,
+    estimatedMonthlyTokenWaste,
+    estimatedMonthlyCostWaste,
+  };
+}
+
+function getGrade(score: number): Score['grade'] {
+  if (score >= 95) return 'A+';
+  if (score >= 85) return 'A';
+  if (score >= 75) return 'B';
+  if (score >= 60) return 'C';
+  if (score >= 40) return 'D';
+  return 'F';
+}
+
+function getSummary(dimension: Dimension, score: number, findingCount: number): string {
+  const quality = score >= 85 ? 'Excellent' : score >= 70 ? 'Good' : score >= 50 ? 'Needs work' : 'Critical attention needed';
+
+  const labels: Record<Dimension, string> = {
+    'security': 'Security posture',
+    'token-efficiency': 'Token efficiency',
+    'specificity': 'Instruction specificity',
+    'completeness': 'Coverage completeness',
+    'conflict-reachability': 'Conflict & reachability',
+    'harness-quality': 'Agent harness quality',
+  };
+
+  return `${labels[dimension]}: ${quality} (${findingCount} finding${findingCount === 1 ? '' : 's'})`;
+}

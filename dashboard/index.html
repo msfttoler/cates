@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CATES Report Dashboard</title>
+  <style>
+    :root { color-scheme: light dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { margin: 0; background: #0f172a; color: #e2e8f0; }
+    main { max-width: 1180px; margin: 0 auto; padding: 32px 20px 64px; }
+    h1 { font-size: 40px; margin: 0 0 8px; }
+    h2 { margin-top: 32px; }
+    .muted { color: #94a3b8; }
+    .drop { border: 2px dashed #38bdf8; border-radius: 20px; padding: 32px; background: #082f49; text-align: center; margin: 24px 0; }
+    .drop input { margin-top: 16px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+    .card { background: #111827; border: 1px solid #334155; border-radius: 16px; padding: 18px; box-shadow: 0 12px 30px rgb(0 0 0 / 0.25); }
+    .score { font-size: 56px; font-weight: 800; line-height: 1; }
+    .grade { font-size: 22px; color: #67e8f9; }
+    table { width: 100%; border-collapse: collapse; background: #111827; border-radius: 16px; overflow: hidden; }
+    th, td { padding: 12px; border-bottom: 1px solid #334155; text-align: left; vertical-align: top; }
+    th { background: #1e293b; color: #cbd5e1; }
+    tr:hover { background: #172033; }
+    .pill { display: inline-block; border-radius: 999px; padding: 2px 9px; font-size: 12px; font-weight: 700; }
+    .critical { background: #7f1d1d; color: #fecaca; }
+    .high { background: #7c2d12; color: #fed7aa; }
+    .medium { background: #713f12; color: #fef3c7; }
+    .low { background: #1e3a8a; color: #bfdbfe; }
+    .good { color: #86efac; }
+    .warn { color: #fde68a; }
+    .bad { color: #fca5a5; }
+    pre { white-space: pre-wrap; background: #020617; padding: 12px; border-radius: 10px; overflow: auto; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>CATES Report Dashboard</h1>
+  <p class="muted">Upload a <code>report.json</code> from <code>cates-analyzer analyze --format json</code>. Everything runs locally in your browser; no data is uploaded.</p>
+
+  <section class="drop" id="drop">
+    <strong>Drop report.json here</strong><br>
+    <input id="file" type="file" accept="application/json,.json">
+  </section>
+
+  <section id="dashboard" class="hidden">
+    <div class="grid">
+      <div class="card"><div class="muted">Overall Score</div><div id="score" class="score"></div><div id="grade" class="grade"></div></div>
+      <div class="card"><div class="muted">Findings</div><div id="findingsCount" class="score"></div><div id="critical" class="grade"></div></div>
+      <div class="card"><div class="muted">Always-loaded Tokens</div><div id="always" class="score"></div><div class="grade">per invocation</div></div>
+      <div class="card"><div class="muted">Estimated Monthly Waste</div><div id="waste" class="score"></div><div id="cost" class="grade"></div></div>
+    </div>
+
+    <h2>Dimension Scores</h2>
+    <div id="dimensions" class="grid"></div>
+
+    <h2>Recommendations</h2>
+    <div id="recommendations"></div>
+
+    <h2>Findings</h2>
+    <table>
+      <thead><tr><th>Rule</th><th>Severity</th><th>File</th><th>Message</th><th>Suggestion</th></tr></thead>
+      <tbody id="findings"></tbody>
+    </table>
+
+    <h2>Discovered Configuration Files</h2>
+    <table>
+      <thead><tr><th>Type</th><th>Scope</th><th>Tokens</th><th>Path</th></tr></thead>
+      <tbody id="files"></tbody>
+    </table>
+  </section>
+</main>
+<script>
+const fileInput = document.getElementById('file');
+const drop = document.getElementById('drop');
+fileInput.addEventListener('change', event => readFile(event.target.files[0]));
+drop.addEventListener('dragover', event => { event.preventDefault(); drop.style.borderColor = '#86efac'; });
+drop.addEventListener('dragleave', () => drop.style.borderColor = '#38bdf8');
+drop.addEventListener('drop', event => { event.preventDefault(); drop.style.borderColor = '#38bdf8'; readFile(event.dataTransfer.files[0]); });
+
+function readFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => render(JSON.parse(reader.result));
+  reader.readAsText(file);
+}
+
+function render(report) {
+  document.getElementById('dashboard').classList.remove('hidden');
+  text('score', report.score.overall);
+  text('grade', `Grade ${report.score.grade}`);
+  text('findingsCount', report.findings.length);
+  text('critical', `${report.score.criticalCount} critical`);
+  text('always', report.discovery.alwaysLoadedTokens.toLocaleString());
+  text('waste', report.score.estimatedMonthlyTokenWaste.toLocaleString());
+  text('cost', `$${report.score.estimatedMonthlyCostWaste.toFixed(2)} / month`);
+
+  document.getElementById('dimensions').innerHTML = report.score.dimensions.map(dim => `
+    <div class="card">
+      <div class="muted">${escapeHtml(dim.dimension)}</div>
+      <div class="score">${dim.score}</div>
+      <div class="${dim.score >= 85 ? 'good' : dim.score >= 60 ? 'warn' : 'bad'}">${escapeHtml(dim.summary)}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('recommendations').innerHTML = report.recommendations.length ? report.recommendations.map(rec => `
+    <div class="card">
+      <h3>${escapeHtml(rec.title)}</h3>
+      <p>${escapeHtml(rec.description)}</p>
+      <p class="muted">Priority ${rec.priority} · Effort ${rec.effort} · Savings ${rec.tokenSavings.toLocaleString()} tokens/invocation · $${rec.costSavings.toFixed(2)}/month</p>
+      ${rec.before || rec.after ? `<pre>Before: ${escapeHtml(rec.before || '')}\n\nAfter: ${escapeHtml(rec.after || '')}</pre>` : ''}
+    </div>
+  `).join('') : '<p class="muted">No recommendations.</p>';
+
+  document.getElementById('findings').innerHTML = report.findings.map(f => `
+    <tr><td>${escapeHtml(f.ruleId)}</td><td><span class="pill ${f.severity}">${f.severity}</span></td><td>${escapeHtml(f.file || '')}${f.line ? ':' + f.line : ''}</td><td>${escapeHtml(f.message)}</td><td>${escapeHtml(f.suggestion || '')}</td></tr>
+  `).join('');
+
+  document.getElementById('files').innerHTML = report.discovery.files.map(f => `
+    <tr><td>${escapeHtml(f.type)}</td><td>${escapeHtml(f.scope)}</td><td>${f.tokenCount.toLocaleString()}</td><td>${escapeHtml(f.relativePath)}</td></tr>
+  `).join('');
+}
+
+function text(id, value) { document.getElementById(id).textContent = value; }
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[ch]));
+}
+</script>
+</body>
+</html>
+

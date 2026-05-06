@@ -1,0 +1,9 @@
+minScore: 80
+requireLevel: 1
+failOn:
+  - critical
+maxAlwaysLoadedTokens: 1500
+assumedDailyInvocations: 50
+assumedModelCostPer1kTokens: 0.01
+suppressions: []
+

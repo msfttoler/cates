@@ -1,0 +1,8 @@
+---
+description: TypeScript rules
+globs: ["**/*.ts"]
+---
+
+- Use explicit exported types at public boundaries.
+- Prefer named exports.
+

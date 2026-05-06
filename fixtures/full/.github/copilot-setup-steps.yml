@@ -1,0 +1,31 @@
+# Copilot Setup Steps — CI Agent Configuration
+
+steps:
+  - name: "Install dependencies"
+    run: "npm ci"
+  - name: "Build project"
+    run: "npm run build"
+  - name: "Run linters"
+    run: "npm run lint"
+  - name: "Run tests"
+    run: "npm test -- --coverage"
+
+# Environment
+allowed-tools:
+  - bash
+  - node
+  - npm
+  - git
+
+# Firewall — restrict network access
+firewall:
+  allow:
+    - "registry.npmjs.org:443"
+    - "github.com:443"
+  deny:
+    - "*"
+
+# Resource limits
+limits:
+  max-runtime: "30m"
+  max-memory: "4GB"

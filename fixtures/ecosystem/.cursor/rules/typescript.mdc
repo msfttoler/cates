@@ -1,0 +1,8 @@
+---
+description: TypeScript project rules
+globs: ["**/*.ts"]
+---
+
+- Use named exports.
+- Avoid broad type assertions.
+
