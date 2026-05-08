@@ -66,9 +66,9 @@ This tool is hardened against adversarial configs:
 This tool practices what it preaches:
 
 - **Zero LLM calls** for core scoring — pure heuristic-based analysis
-- **Real tokenizer** (`cl100k_base` via `js-tiktoken`) for accurate cost modeling
+- **Real tokenizer** (`cl100k_base` via `js-tiktoken`) for accurate context measurement
 - **Config precedence awareness** — knows which files are always-loaded vs conditional
-- **Savings projections** with conservative direct-token savings, projected retry/tool-call savings, and monthly/annualized cost impact
+- **Token reduction projections** with conservative direct-token reduction and projected retry/tool-call reduction percentages
 
 ## 📁 Files It Discovers
 
@@ -93,6 +93,7 @@ Usage:
   cates-analyzer rules [options]
   cates-analyzer explain <ruleId>
   cates-analyzer portfolio [options] [path]
+  cates-analyzer demo [options]
 
 Common analyze options:
   -f, --format <format>       pretty, json, sarif
@@ -107,6 +108,10 @@ Common analyze options:
 ```
 
 `review` accepts local folders and GitHub URLs. For private repositories, authenticate with `gh auth login` and use `review`; CATES uses local GitHub CLI credentials instead of asking for tokens.
+
+`demo` scans a built-in 100-repository manifest: 25 Microsoft, 25 GitHub, 25 Claude/Anthropic ecosystem, and 25 broader open-source repositories. Override it with `--repos-file repos.txt`, where each non-comment line is either a GitHub URL or `<category> <GitHub URL>`.
+
+You can also run demo mode through the default command with `cates-analyzer --demo`.
 
 Policy suppressions can be used for documented false positives or temporary accepted risk:
 
@@ -142,7 +147,7 @@ src/
 ├── autofix.ts                # Safe fix/dry-run support
 ├── portfolio.ts              # Multi-repo scanning
 ├── utils/
-│   └── tokenizer.ts          # cl100k_base tokenizer + cost modeling
+│   └── tokenizer.ts          # cl100k_base tokenizer + context measurement
 ├── types.ts                  # Zod-validated type definitions
 └── index.ts                  # Library entry point
 ```

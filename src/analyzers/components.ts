@@ -50,7 +50,7 @@ export async function analyzePrompts(
         dimension: 'token-efficiency',
         severity: 'medium',
         confidence: 'medium',
-        message: `Prompt file is ${tokens} tokens. Large prompts cost more on every invocation.`,
+        message: `Prompt file is ${tokens} tokens. Large prompts increase loaded context on every invocation.`,
         file: file.relativePath,
         suggestion: 'Consider splitting into a base prompt + context-specific additions, or reference files with @file instead of inlining.',
         tokenImpact: tokens - 500, // assume 500 is reasonable

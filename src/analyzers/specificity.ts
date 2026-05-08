@@ -60,7 +60,7 @@ function checkVagueInstructions(lines: string[], file: string): Finding[] {
           line: i + 1,
           evidence: line.trim().slice(0, 80),
           suggestion: 'Replace with specific rules. E.g., instead of "handle errors properly" → "Wrap async calls in try/catch, log errors with structured JSON, return 4xx/5xx with error codes from errors.ts"',
-          tokenImpact: -countTokens(line), // negative = costs more to fix but saves in agent quality
+          tokenImpact: -countTokens(line), // negative = may add guidance but improves agent quality
         });
       }
     }

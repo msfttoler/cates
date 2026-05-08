@@ -1,5 +1,4 @@
-import type { Finding, Score, DimensionScore, Dimension, DiscoveryResult, AnalyzerOptions } from '../types.js';
-import { estimateMonthlyCost } from '../utils/tokenizer.js';
+import type { Finding, Score, DimensionScore, Dimension, DiscoveryResult } from '../types.js';
 
 const DIMENSION_WEIGHTS: Record<Dimension, number> = {
   'security': 0.25,
@@ -21,7 +20,6 @@ const SEVERITY_DEDUCTIONS: Record<string, number> = {
 export function calculateScore(
   findings: Finding[],
   discovery: DiscoveryResult,
-  options: AnalyzerOptions,
 ): Score {
   const dimensions: DimensionScore[] = [];
 
@@ -58,20 +56,16 @@ export function calculateScore(
   const grade = getGrade(overall);
   const criticalCount = findings.filter(f => f.severity === 'critical').length;
 
-  // Estimate monthly waste from token inefficiencies
   const tokenWaste = findings
     .filter(f => f.dimension === 'token-efficiency' && f.tokenImpact && f.tokenImpact > 0)
     .reduce((sum, f) => sum + (f.tokenImpact ?? 0), 0);
 
-  const estimatedMonthlyTokenWaste = tokenWaste * options.assumedDailyInvocations * 22;
   const estimatedTokenSavingsPercentage = discovery.totalTokens > 0
     ? roundPercent((tokenWaste / discovery.totalTokens) * 100)
     : 0;
-  const estimatedMonthlyCostWaste = estimateMonthlyCost({
-    tokenCount: tokenWaste,
-    dailyInvocations: options.assumedDailyInvocations,
-    costPer1kTokens: options.assumedModelCostPer1kTokens,
-  });
+  const findingsPerThousandTokens = discovery.totalTokens > 0
+    ? roundPercent((findings.length / discovery.totalTokens) * 1000)
+    : 0;
 
   return {
     overall,
@@ -81,8 +75,7 @@ export function calculateScore(
     criticalCount,
     estimatedTokenWaste: tokenWaste,
     estimatedTokenSavingsPercentage,
-    estimatedMonthlyTokenWaste,
-    estimatedMonthlyCostWaste,
+    findingsPerThousandTokens,
   };
 }
 

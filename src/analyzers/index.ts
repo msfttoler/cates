@@ -81,11 +81,11 @@ export async function analyze(rawOptions: Partial<AnalyzerOptions> & { repoPath:
   const suppressionResult = applySuppressions(rawFindings, options.suppressions);
 
   // Phase 3: Score
-  const score = calculateScore(suppressionResult.findings, discovery, options);
+  const score = calculateScore(suppressionResult.findings, discovery);
 
   // Phase 4: Recommendations (prioritized, actionable)
-  const recommendations = generateRecommendations(suppressionResult.findings, discovery, options);
-  const savings = calculateSavings(score, discovery, recommendations, options);
+  const recommendations = generateRecommendations(suppressionResult.findings, discovery);
+  const savings = calculateSavings(score, discovery, recommendations);
 
   return {
     repoPath: options.repoPath,

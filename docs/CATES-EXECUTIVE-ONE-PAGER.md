@@ -2,23 +2,23 @@
 
 ## Coding Agent Token Economics Standard
 
-**CATES is a vendor-neutral standard for governing the cost, security, and effectiveness of AI coding assistants.** It defines how organizations should structure, measure, and manage the instructions, prompts, rules, tool configurations, agents, hooks, and setup files that shape coding-agent behavior.
+**CATES is a vendor-neutral standard for governing the token footprint, security, and effectiveness of AI coding assistants.** It defines how organizations should structure, measure, and manage the instructions, prompts, rules, tool configurations, agents, hooks, and setup files that shape coding-agent behavior.
 
-As AI coding tools become embedded across engineering teams, their configuration files become a new operational control plane. Those files determine what context is loaded, what tools agents may use, how secure the interaction is, and how many tokens are consumed before any useful work begins. In usage-based and token-based models, inefficient configuration directly becomes recurring cost, latency, and quality risk.
+As AI coding tools become embedded across engineering teams, their configuration files become a new operational control plane. Those files determine what context is loaded, what tools agents may use, how secure the interaction is, and how many tokens are consumed before any useful work begins. Inefficient configuration directly becomes recurring context bloat, latency, and quality risk.
 
 CATES gives leaders a common language and measurable framework for managing that risk.
 
 ## Why it matters
 
-AI coding assistants are moving from experimentation to enterprise-scale adoption. Without a standard, each team creates its own prompts, rules, agent definitions, and tool permissions. The result is predictable: duplicated guidance, oversized context, unclear authority, insecure tool access, inconsistent quality, and hidden spend.
+AI coding assistants are moving from experimentation to enterprise-scale adoption. Without a standard, each team creates its own prompts, rules, agent definitions, and tool permissions. The result is predictable: duplicated guidance, oversized context, unclear authority, insecure tool access, and inconsistent quality.
 
 CATES addresses this by establishing a disciplined operating model for coding-agent configuration:
 
 | Executive concern | CATES response |
 |---|---|
-| **Cost control** | Defines token budgets, loading scopes, waste patterns, and cost modeling methods. |
+| **Token control** | Defines token budgets, loading scopes, and waste patterns. |
 | **Security** | Requires protection against secrets exposure, prompt injection, unsafe execution, and excessive permissions. |
-| **Productivity** | Improves signal-to-noise so agents spend less context on boilerplate and more on useful work. |
+| **Productivity** | Improves signal-to-noise so agents allocate less context to boilerplate and more to useful work. |
 | **Governance** | Provides conformance levels, policy controls, and measurable adoption targets. |
 | **Vendor flexibility** | Applies across current and future coding-agent ecosystems rather than locking into one provider. |
 
@@ -35,13 +35,13 @@ CATES defines a taxonomy for the major configuration surfaces used by modern cod
 | **Tool configuration** | MCP servers, tool manifests, external integrations, and permissions. |
 | **Setup and hooks** | Environment bootstrap, preflight checks, automation hooks, and guardrails. |
 
-It also defines how these surfaces should be measured: what is always loaded, what is conditional, what is on demand, and how each category affects cost and behavior.
+It also defines how these surfaces should be measured: what is always loaded, what is conditional, what is on demand, and how each category affects context footprint and behavior.
 
 ## Strategic outcomes
 
 CATES helps organizations move from ad hoc prompt sprawl to managed AI engineering operations.
 
-1. **Reduce avoidable token spend** by eliminating duplicated, stale, verbose, or always-loaded context.
+1. **Reduce avoidable token load** by eliminating duplicated, stale, verbose, or always-loaded context.
 2. **Improve coding-agent quality** by making instructions specific, scoped, testable, and conflict-free.
 3. **Lower security exposure** by standardizing permissions, injection resistance, and secret handling.
 4. **Create executive visibility** into AI coding configuration quality across teams and portfolios.
@@ -63,5 +63,4 @@ This gives executives a simple adoption metric while giving engineering teams a 
 
 CATES turns coding-agent configuration into a measurable management discipline. It reduces waste before it reaches the model, improves assistant effectiveness before teams blame the tool, and strengthens governance before agent usage becomes unmanaged infrastructure.
 
-The core idea is simple: **every unnecessary token is recurring spend, every unclear instruction is quality risk, and every overpowered tool permission is security exposure.** CATES gives organizations the standard to manage all three.
-
+The core idea is simple: **every unnecessary token is recurring context bloat, every unclear instruction is quality risk, and every overpowered tool permission is security exposure.** CATES gives organizations the standard to manage all three.

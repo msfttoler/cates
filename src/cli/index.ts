@@ -10,6 +10,8 @@ import { applySafeFixes } from '../autofix.js';
 import { getRule, RULE_CATALOG, rulesAsJson } from '../rules/catalog.js';
 import { scanPortfolio } from '../portfolio.js';
 import { resolveReviewSource } from '../sources.js';
+import { DEFAULT_DEMO_REPOSITORIES, type DemoCategory } from '../demo-repos.js';
+import { scanDemo, type DemoScanResult } from '../demo.js';
 import type { AnalysisResult, Severity } from '../types.js';
 
 program
@@ -18,13 +20,29 @@ program
   .version('1.0.0');
 
 program
+  .command('demo')
+  .description('Run a demo scan against the built-in 100-repository set or a custom repo file')
+  .option('-f, --format <format>', 'Output format: pretty or json', 'pretty')
+  .option('--repos-file <path>', 'Text file of repositories to scan; one GitHub URL per line, optionally prefixed by category')
+  .option('--category <list>', 'Comma-separated categories: microsoft,github,claude,open-source')
+  .option('--limit <n>', 'Scan only the first N repositories')
+  .option('--concurrency <n>', 'Number of repositories to scan in parallel (1-8)', '4')
+  .option('--max-files <n>', 'Maximum config files to analyze per repository', '50')
+  .option('--max-depth <n>', 'Maximum directory traversal depth per repository', '5')
+  .option('--fail-fast', 'Stop on the first repository scan failure')
+  .action(async (opts) => runDemoCommand(opts));
+
+program
   .command('analyze', { isDefault: true })
   .description('Analyze one repository')
   .argument('[path]', 'Path to repository root', '.')
   .option('-f, --format <format>', 'Output format: pretty, json, sarif', 'pretty')
+  .option('--demo', 'Run demo scan instead of analyzing a path')
+  .option('--repos-file <path>', 'Demo mode: text file of repositories to scan')
+  .option('--category <list>', 'Demo mode: comma-separated categories: microsoft,github,claude,open-source')
+  .option('--limit <n>', 'Demo mode: scan only the first N repositories')
+  .option('--concurrency <n>', 'Demo mode: number of repositories to scan in parallel (1-8)', '4')
   .option('--policy <path>', 'Path to .cates.yml/.json policy file')
-  .option('--invocations <n>', 'Assumed daily invocations for cost modeling')
-  .option('--cost <n>', 'Cost per 1k tokens (USD) for cost modeling')
   .option('--max-files <n>', 'Maximum config files to analyze', '50')
   .option('--max-depth <n>', 'Maximum directory traversal depth', '5')
   .option('--files <list>', 'Comma-separated relative file paths to analyze instead of auto-discovery')
@@ -44,8 +62,6 @@ program
   .argument('<source>', 'Local folder or GitHub URL (repo, tree, blob, or pull request)')
   .option('-f, --format <format>', 'Output format: pretty, json, sarif', 'pretty')
   .option('--policy <path>', 'Path to .cates.yml/.json policy file')
-  .option('--invocations <n>', 'Assumed daily invocations for cost modeling')
-  .option('--cost <n>', 'Cost per 1k tokens (USD) for cost modeling')
   .option('--max-files <n>', 'Maximum config files to analyze', '50')
   .option('--max-depth <n>', 'Maximum directory traversal depth', '5')
   .option('--files <list>', 'Comma-separated relative file paths to analyze instead of auto-discovery')
@@ -139,10 +155,37 @@ program
   });
 
 async function runAnalyze(path: string, opts: Record<string, unknown>): Promise<void> {
+  if (opts.demo) {
+    await runDemoCommand(opts);
+    return;
+  }
   const repoPath = resolve(path);
   try {
     const exitCode = await executeAnalyze(repoPath, opts);
     if (exitCode !== 0) process.exit(exitCode);
+  } catch (err) {
+    console.error('Error:', err instanceof Error ? err.message : err);
+    process.exit(1);
+  }
+}
+
+async function runDemoCommand(opts: Record<string, unknown>): Promise<void> {
+  try {
+    const format = formatOpt(opts.format, ['pretty', 'json']);
+    const result = await scanDemo({
+      reposFile: stringOpt(opts.reposFile),
+      categories: categoryList(opts.category),
+      limit: numberOpt(opts.limit, '--limit', { min: 1, integer: true }),
+      concurrency: numberOpt(opts.concurrency, '--concurrency', { min: 1, max: 8, integer: true }) ?? 4,
+      maxFiles: numberOpt(opts.maxFiles, '--max-files', { min: 1, integer: true }) ?? 50,
+      maxDepth: numberOpt(opts.maxDepth, '--max-depth', { min: 0, integer: true }) ?? 5,
+      continueOnError: !opts.failFast,
+    });
+    if (format === 'json') {
+      process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+    } else {
+      process.stdout.write(formatDemo(result) + '\n');
+    }
   } catch (err) {
     console.error('Error:', err instanceof Error ? err.message : err);
     process.exit(1);
@@ -199,8 +242,6 @@ function buildAnalyzeOptions(
     repoPath,
     outputFormat: formatOpt(opts.format),
     includeEvidence: opts.evidence !== false,
-    assumedDailyInvocations: numberOpt(opts.invocations, '--invocations', { min: 0 }) ?? policy.assumedDailyInvocations ?? 50,
-    assumedModelCostPer1kTokens: numberOpt(opts.cost, '--cost', { min: 0 }) ?? policy.assumedModelCostPer1kTokens ?? 0.01,
     maxFiles: numberOpt(opts.maxFiles, '--max-files', { min: 1, integer: true }) ?? 50,
     maxDepth: numberOpt(opts.maxDepth, '--max-depth', { min: 0, integer: true }) ?? 5,
     includeFiles: includeFiles.length > 0 ? includeFiles : undefined,
@@ -261,11 +302,48 @@ function formatPortfolio(portfolio: Awaited<ReturnType<typeof scanPortfolio>>): 
     `CATES Portfolio: ${portfolio.rootPath}`,
     `Repositories: ${portfolio.totals.repos}`,
     `Findings: ${portfolio.totals.findings} (${portfolio.totals.critical} critical)`,
-    `Estimated monthly waste: ${portfolio.totals.estimatedMonthlyTokenWaste.toLocaleString()} tokens / $${portfolio.totals.estimatedMonthlyCostWaste.toFixed(2)}`,
+    `Token reduction opportunity: ${portfolio.totals.projectedTokenSavingsPercentage.toFixed(1)}%`,
     '',
   ];
   for (const repo of portfolio.repos.sort((a, b) => a.score - b.score)) {
     lines.push(`${repo.score}/100 ${repo.grade} L${repo.level} ${repo.path}`);
+  }
+  return lines.join('\n');
+}
+
+function formatDemo(result: DemoScanResult): string {
+  const lines = [
+    'CATES Demo Scan',
+    `Repositories: ${result.reposScanned}/${result.reposRequested} scanned (${result.reposFailed} failed)`,
+    `Default manifest size: ${DEFAULT_DEMO_REPOSITORIES.length} repositories`,
+    `Average score: ${result.totals.averageScore}/100`,
+    `Token reduction opportunity: ${result.totals.averageProjectedReductionPercentage.toFixed(1)}%`,
+    `Finding density: ${result.totals.averageFindingsPerThousandTokens.toFixed(1)} findings per 1K analyzed tokens`,
+    `Findings: ${result.totals.findings} total (${result.totals.critical} critical, ${result.totals.high} high)`,
+    `Config footprint: ${result.totals.configFiles} files / ${result.totals.totalTokens.toLocaleString()} tokens`,
+    '',
+    'Categories:',
+  ];
+  for (const [category, summary] of Object.entries(result.categories)) {
+    lines.push(`  ${category}: ${summary.repos} scanned, avg ${summary.averageScore}/100, ${summary.averageProjectedReductionPercentage.toFixed(1)}% reduction, ${summary.averageFindingsPerThousandTokens.toFixed(1)} findings/1K tokens`);
+  }
+  if (result.topRules.length > 0) {
+    lines.push('', 'Top rules:', ...result.topRules.map(rule => `  ${rule.ruleId}: ${rule.count}`));
+  }
+  const weakest = [...result.repos]
+    .filter(repo => !repo.error)
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 10);
+  if (weakest.length > 0) {
+    lines.push('', 'Lowest-scoring repositories:');
+    for (const repo of weakest) {
+      lines.push(`  ${repo.score}/100 ${repo.grade} ${repo.repoPath} (${repo.projectedReductionPercentage.toFixed(1)}% reduction, ${repo.findings} findings)`);
+    }
+  }
+  const failed = result.repos.filter(repo => repo.error);
+  if (failed.length > 0) {
+    lines.push('', 'Scan failures:', ...failed.slice(0, 10).map(repo => `  ${repo.repoPath}: ${repo.error}`));
+    if (failed.length > 10) lines.push(`  ... ${failed.length - 10} more`);
   }
   return lines.join('\n');
 }
@@ -324,6 +402,20 @@ function severityList(value: unknown): Severity[] | undefined {
   }
   const severities = values.filter(isSeverity);
   return severities.length > 0 ? severities : undefined;
+}
+
+function categoryList(value: unknown): DemoCategory[] | undefined {
+  if (typeof value !== 'string') return undefined;
+  const values = value.split(',').map(v => v.trim()).filter(v => v.length > 0);
+  const invalid = values.filter(value => !isDemoCategory(value));
+  if (invalid.length > 0) {
+    throw new Error(`--category contains invalid categories: ${invalid.join(', ')}. Allowed: microsoft, github, claude, open-source.`);
+  }
+  return values.filter(isDemoCategory);
+}
+
+function isDemoCategory(value: string): value is DemoCategory {
+  return value === 'microsoft' || value === 'github' || value === 'claude' || value === 'open-source';
 }
 
 function isSeverity(value: string): value is Severity {

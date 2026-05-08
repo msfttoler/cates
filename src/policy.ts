@@ -9,8 +9,6 @@ export interface CatesPolicy {
   requireLevel?: 1 | 2 | 3;
   failOn?: Severity[];
   maxAlwaysLoadedTokens?: number;
-  assumedDailyInvocations?: number;
-  assumedModelCostPer1kTokens?: number;
   suppressions?: Suppression[];
 }
 
@@ -42,8 +40,6 @@ function normalizePolicy(value: unknown): CatesPolicy {
     requireLevel: asLevel(input['requireLevel']),
     failOn: Array.isArray(input['failOn']) ? input['failOn'].filter(isSeverity) : undefined,
     maxAlwaysLoadedTokens: asNumber(input['maxAlwaysLoadedTokens']),
-    assumedDailyInvocations: asNumber(input['assumedDailyInvocations']),
-    assumedModelCostPer1kTokens: asNumber(input['assumedModelCostPer1kTokens']),
     suppressions: Array.isArray(input['suppressions'])
       ? input['suppressions'].filter(isSuppression)
       : undefined,

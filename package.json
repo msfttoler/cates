@@ -32,7 +32,8 @@
     "typecheck": "tsc --noEmit",
     "cates": "tsx src/cli/index.ts",
     "analyze": "tsx src/cli/index.ts analyze",
-    "review": "tsx src/cli/index.ts review"
+    "review": "tsx src/cli/index.ts review",
+    "demo": "tsx src/cli/index.ts demo"
   },
   "keywords": [
     "cates",

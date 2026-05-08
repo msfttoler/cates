@@ -12,8 +12,7 @@ export interface PortfolioRepoResult {
   findings: number;
   critical: number;
   alwaysLoadedTokens: number;
-  estimatedMonthlyTokenWaste: number;
-  estimatedMonthlyCostWaste: number;
+  tokenSavingsPercentage: number;
 }
 
 export interface PortfolioResult {
@@ -23,8 +22,7 @@ export interface PortfolioResult {
     repos: number;
     findings: number;
     critical: number;
-    estimatedMonthlyTokenWaste: number;
-    estimatedMonthlyCostWaste: number;
+    projectedTokenSavingsPercentage: number;
   };
 }
 
@@ -47,8 +45,7 @@ export async function scanPortfolio(rootPath: string): Promise<PortfolioResult> 
       findings: result.findings.length,
       critical: result.score.criticalCount,
       alwaysLoadedTokens: result.discovery.alwaysLoadedTokens,
-      estimatedMonthlyTokenWaste: result.score.estimatedMonthlyTokenWaste,
-      estimatedMonthlyCostWaste: result.score.estimatedMonthlyCostWaste,
+      tokenSavingsPercentage: result.savings.projectedPercentage,
     });
   }
 
@@ -59,8 +56,12 @@ export async function scanPortfolio(rootPath: string): Promise<PortfolioResult> 
       repos: repos.length,
       findings: repos.reduce((sum, r) => sum + r.findings, 0),
       critical: repos.reduce((sum, r) => sum + r.critical, 0),
-      estimatedMonthlyTokenWaste: repos.reduce((sum, r) => sum + r.estimatedMonthlyTokenWaste, 0),
-      estimatedMonthlyCostWaste: repos.reduce((sum, r) => sum + r.estimatedMonthlyCostWaste, 0),
+      projectedTokenSavingsPercentage: average(repos.map(repo => repo.tokenSavingsPercentage)),
     },
   };
+}
+
+function average(values: number[]): number {
+  if (values.length === 0) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
 }

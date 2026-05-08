@@ -72,7 +72,7 @@ function checkRedundantPhrasing(fc: FileContent): Finding[] {
         file: fc.relativePath,
         line: i + 1,
         evidence: lines[i]!.trim().slice(0, 80),
-        suggestion: 'Remove duplicate — it costs tokens on every invocation without adding value.',
+        suggestion: 'Remove duplicate — it adds tokens on every invocation without adding value.',
         tokenImpact: countTokens(lines[i]!),
       });
     } else {
@@ -103,7 +103,7 @@ function checkVerboseExamples(fc: FileContent): Finding[] {
         file: fc.relativePath,
         line: lineNum,
         evidence: block.slice(0, 80) + '...',
-        suggestion: 'Replace inline examples >200 tokens with @file references to save per-invocation cost.',
+        suggestion: 'Replace inline examples >200 tokens with @file references to reduce per-invocation tokens.',
         tokenImpact: Math.round(tokens * 0.8), // assume 80% saveable
       });
     }

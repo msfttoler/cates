@@ -35,7 +35,7 @@ function toPretty(result: AnalysisResult): string {
 
   lines.push('  ✨ Executive Summary:');
   lines.push(`     Top risk: ${topRisk(findings)}`);
-  lines.push(`     Biggest savings: ${topSavings(recommendations)}`);
+  lines.push(`     Biggest token reduction: ${topSavings(recommendations)}`);
   lines.push(`     First fix: ${firstFix(recommendations)}`);
   if (result.suppressionSummary.suppressedFindings > 0 || result.suppressionSummary.expired > 0) {
     lines.push(`     Suppressions: ${result.suppressionSummary.suppressedFindings} finding(s) hidden, ${result.suppressionSummary.expired} expired`);
@@ -46,7 +46,7 @@ function toPretty(result: AnalysisResult): string {
   lines.push('  📁 Files Discovered:');
   lines.push(`     ${discovery.files.length} config file(s) found`);
   lines.push(`     ${discovery.totalTokens.toLocaleString()} total tokens in active configs`);
-  lines.push(`     ${discovery.alwaysLoadedTokens.toLocaleString()} tokens always-loaded (per invocation cost)`);
+  lines.push(`     ${discovery.alwaysLoadedTokens.toLocaleString()} tokens always-loaded`);
   if (discovery.conditionalTokens > 0) {
     lines.push(`     ${discovery.conditionalTokens.toLocaleString()} tokens conditional`);
   }
@@ -72,11 +72,10 @@ function toPretty(result: AnalysisResult): string {
 
   // Token savings impact
   if (discovery.totalTokens > 0) {
-   lines.push('  💰 Potential Token Savings:');
-   lines.push(`     Conservative: ~${result.savings.conservativeTokensPerInvocation.toLocaleString()} tokens/invocation (${formatPercent(result.savings.conservativePercentage)} of analyzed tokens)`);
-   lines.push(`     Projected:    ~${result.savings.projectedTokensPerInvocation.toLocaleString()} tokens/invocation (${formatPercent(result.savings.projectedPercentage)} equivalent)`);
-   lines.push(`     Monthly:      ${result.savings.projectedMonthlyTokens.toLocaleString()} tokens | ~$${result.savings.projectedMonthlyCost.toFixed(2)}`);
-   lines.push(`     Annualized:   ${result.savings.projectedAnnualTokens.toLocaleString()} tokens | ~$${result.savings.projectedAnnualCost.toFixed(2)}`);
+   lines.push('  📉 Token Reduction Opportunity:');
+   lines.push(`     Direct:       ${formatPercent(result.savings.conservativePercentage)} of analyzed tokens (~${result.savings.conservativeTokensPerInvocation.toLocaleString()} tokens/invocation)`);
+   lines.push(`     Projected:    ${formatPercent(result.savings.projectedPercentage)} equivalent (~${result.savings.projectedTokensPerInvocation.toLocaleString()} tokens/invocation)`);
+   lines.push(`     Signal:       ${score.findingsPerThousandTokens.toFixed(1)} findings per 1K analyzed tokens`);
    lines.push('');
   }
 
@@ -128,8 +127,8 @@ function toPretty(result: AnalysisResult): string {
         lines.push(`        Files: ${rec.files.slice(0, 3).join(', ')}${rec.files.length > 3 ? ` (+${rec.files.length - 3} more)` : ''}`);
       }
       if (rec.tokenSavings > 0) {
-        const savingsLabel = rec.tokenSavingsKind === 'projected' ? 'Projected savings' : 'Savings';
-        lines.push(`        ${savingsLabel}: ~${rec.tokenSavings} tokens/invocation (${formatPercent(rec.tokenSavingsPercentage ?? 0)} equivalent) | ~$${rec.costSavings.toFixed(2)}/month`);
+        const savingsLabel = rec.tokenSavingsKind === 'projected' ? 'Projected reduction' : 'Token reduction';
+        lines.push(`        ${savingsLabel}: ~${rec.tokenSavings} tokens/invocation (${formatPercent(rec.tokenSavingsPercentage ?? 0)} equivalent)`);
       }
       lines.push(`        Effort: ${rec.effort}`);
       if (rec.before && rec.after) {

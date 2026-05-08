@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { analyze } from '../src/analyzers/index.js';
 import { parseGitHubLink } from '../src/sources.js';
 import { getRule, RULE_CATALOG } from '../src/rules/catalog.js';
+import { DEFAULT_DEMO_REPOSITORIES } from '../src/demo-repos.js';
 import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -207,9 +208,10 @@ describe('CATES Analyzer', () => {
       const json = createReport(result, 'json');
       expect(() => JSON.parse(json)).not.toThrow();
       expect(JSON.parse(json).score).toHaveProperty('estimatedTokenSavingsPercentage');
-      expect(JSON.parse(json).savings).toHaveProperty('projectedAnnualTokens');
+      expect(JSON.parse(json).score).toHaveProperty('findingsPerThousandTokens');
       expect(JSON.parse(json).recommendations[0]).toHaveProperty('ruleIds');
       expect(JSON.parse(json).recommendations[0]).toHaveProperty('safety');
+      expect(JSON.parse(json).savings.projectedPercentage).toBeLessThanOrEqual(100);
     });
 
     it('produces valid SARIF output', async () => {
@@ -232,8 +234,9 @@ describe('CATES Analyzer', () => {
       expect(pretty).toContain('Executive Summary');
       expect(pretty).toContain('Coverage Matrix');
       expect(pretty).toContain('Dimension Scores');
-      expect(pretty).toContain('Potential Token Savings');
-      expect(pretty).toContain('Annualized');
+      expect(pretty).toContain('Token Reduction Opportunity');
+      expect(pretty).toContain('findings per 1K analyzed tokens');
+      expect(pretty).not.toContain('$');
     });
   });
 
@@ -325,6 +328,23 @@ describe('CATES Analyzer', () => {
 
       expect(result.status).toBe(1);
       expect(result.stderr).toContain('--format must be one of');
+    });
+
+    it('ships a balanced 100-repository demo manifest', () => {
+      expect(DEFAULT_DEMO_REPOSITORIES).toHaveLength(100);
+      for (const category of ['microsoft', 'github', 'claude', 'open-source']) {
+        expect(DEFAULT_DEMO_REPOSITORIES.filter(repo => repo.category === category)).toHaveLength(25);
+      }
+    });
+
+    it('fails clearly on invalid demo categories', () => {
+      const result = spawnSync('npx', ['tsx', 'src/cli/index.ts', 'demo', '--category', 'bogus', '--limit', '1'], {
+        cwd: REPO_ROOT,
+        encoding: 'utf-8',
+      });
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('--category contains invalid categories');
     });
   });
 

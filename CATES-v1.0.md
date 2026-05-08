@@ -13,7 +13,7 @@ The Coding Agent Token Economics Standard (CATES) defines normative requirements
 
 CATES is designed as an actionable, tool-verifiable standard for this space — bridging the gap between academic frameworks (5C Prompt Contract, TEA-UF) and day-to-day engineering practice.
 
-As AI coding assistants move to token-based and usage-based pricing models, every token in a configuration file becomes a direct operational cost. CATES provides the discipline to manage that cost without sacrificing capability.
+As AI coding assistants move to token-based and token-based context limits models, every token in a configuration file becomes a direct context load. CATES provides the discipline to manage context footprint without sacrificing capability.
 
 ---
 
@@ -30,7 +30,7 @@ As AI coding assistants move to token-based and usage-based pricing models, ever
 9. [Rules Specification](#9-rules-specification)
 10. [Scoring Methodology](#10-scoring-methodology)
 11. [Measurement Procedure](#11-measurement-procedure)
-12. [Cost Modeling](#12-cost-modeling)
+12. [Token Impact Modeling](#12-token-impact-modeling)
 13. [Governance](#13-governance)
 14. [Standard Maintenance](#14-standard-maintenance)
 
@@ -85,9 +85,9 @@ CATES is vendor-agnostic. Any AI coding assistant that consumes repository-level
 - General LLM prompt engineering (non-coding contexts)
 - Model training or fine-tuning economics
 - Chat conversation content (ephemeral, user-controlled)
-- Infrastructure cost beyond token pricing (compute, network)
+- Infrastructure runtime impact beyond token measurement
 - IDE plugin implementation details
-- Token pricing negotiations with vendors
+- Vendor commercial terms
 
 ### 1.5 Relationship to Other Frameworks
 
@@ -96,8 +96,7 @@ CATES is vendor-agnostic. Any AI coding assistant that consumes repository-level
 | **5C Prompt Contract** (arXiv:2507.07045) | CATES incorporates 5C's parsimony principle; extends it with measurement methodology and tooling conformance |
 | **TEA-UF** (IJAIS 2024) | CATES operationalizes TEA-UF's governance layer with concrete rules and CI integration |
 | **OWASP LLM Top 10** | CATES security rules complement OWASP's prompt injection and data leakage categories |
-| **FinOps Foundation** | CATES cost modeling aligns with FinOps "Inform → Optimize → Operate" lifecycle |
-
+| **
 ---
 
 ## 2. Normative References
@@ -117,19 +116,19 @@ The following documents are referenced normatively in this standard:
 ### 3.1 Terms and Definitions
 
 **3.1.1 Token**  
-The atomic unit of text processed by a language model. One token ≈ 4 characters or ¾ of an English word in cl100k_base encoding. Tokens are the unit of billing, context consumption, and latency cost.
+The atomic unit of text processed by a language model. One token ≈ 4 characters or ¾ of an English word in cl100k_base encoding. Tokens are the unit of context consumption and latency impact.
 
 **3.1.2 Configuration Surface**  
 Any file, setting, or artifact that is consumed by an AI coding assistant to shape its behavior, context, or capabilities during operation.
 
 **3.1.3 Always-Loaded Configuration**  
-Configuration content that is injected into the model context on every invocation, regardless of task or user intent. This represents the "base cost" per interaction.
+Configuration content that is injected into the model context on every invocation, regardless of task or user intent. This represents the "base load" per interaction.
 
 **3.1.4 Conditional Configuration**  
-Configuration content loaded based on context signals (active file type, directory, triggered agent, task type). Cost is incurred only when conditions are met.
+Configuration content loaded based on context signals (active file type, directory, triggered agent, task type). Token load is incurred only when conditions are met.
 
 **3.1.5 On-Demand Configuration**  
-Configuration content loaded only when explicitly requested by the user or agent (e.g., via file reference or tool invocation). Lowest cost profile.
+Configuration content loaded only when explicitly requested by the user or agent (e.g., via file reference or tool invocation). Lowest token-load profile.
 
 **3.1.6 Token Budget**  
 The total token count allocated to configuration content per invocation. Distinguished from the model's context window (which also includes conversation history and generated output).
@@ -155,11 +154,11 @@ A defined set of requirements that a repository, organization, or tool must sati
 **3.1.13 Token Impact**  
 The estimated number of tokens affected by a finding. Positive values indicate waste (tokens that could be saved); negative values indicate tokens that should be added.
 
-**3.1.14 Cost Multiplier**  
+**3.1.14 Load Multiplier**  
 A factor applied to token counts based on their loading scope. Always-loaded tokens have a multiplier of 1.0× per invocation; conditional tokens are weighted by their activation probability.
 
-**3.1.15 Usage-Based Pricing**  
-A billing model in which organizations are charged based on actual token consumption rather than flat per-seat licensing. Under this model, token efficiency directly reduces operational cost.
+**3.1.15 Token-Sensitive Operation**  
+An operating model in which organizations track actual token consumption because context footprint affects latency, quality, and model behavior.
 
 ### 3.2 Abbreviations
 
@@ -171,7 +170,7 @@ A billing model in which organizations are charged based on actual token consump
 | RAG | Retrieval-Augmented Generation |
 | CI | Continuous Integration |
 | SARIF | Static Analysis Results Interchange Format |
-| FinOps | Financial Operations (cloud cost management discipline) |
+| | Operational token governance |
 
 ---
 
@@ -238,8 +237,8 @@ Sections and annexes are marked as either **Normative** (requirements that MUST 
 │  │ Paid on     │  │ context      │  │ explicitly    │             │
 │  │ EVERY       │  │ signals      │  │ requests      │             │
 │  │ invocation  │  │              │  │               │             │
-│  │             │  │ Cost =       │  │ Cost =        │             │
-│  │ Cost = 1.0x │  │ P(active)×1x │  │ P(requested) │             │
+│  │             │  │ Load =       │  │ Load =        │             │
+│  │ Load = 1.0x │  │ P(active)×1x │  │ P(requested) │             │
 │  └──────┬──────┘  └──────┬───────┘  └──────┬────────┘             │
 │         │                │                  │                      │
 │         ▼                ▼                  ▼                      │
@@ -255,19 +254,18 @@ Sections and annexes are marked as either **Normative** (requirements that MUST 
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### 5.2 Cost Accumulation Model
+### 5.2 Token Accumulation Model
 
-The economic impact of configuration tokens compounds across invocations:
+The context impact of configuration tokens compounds across invocations:
 
 ```
-Monthly Cost = Σ (token_count × cost_multiplier × daily_invocations × 22 workdays × cost_per_token)
+Monthly Load = Σ (token_count × load_multiplier × daily_invocations × 22 workdays)
 ```
 
 Where:
 - `token_count` = tokens in the configuration file (measured by specified tokenizer)
-- `cost_multiplier` = scope-based weight (always=1.0, conditional=P(activation), on-demand=P(request))
+- `load_multiplier` = scope-based weight (always=1.0, conditional=P(activation), on-demand=P(request))
 - `daily_invocations` = estimated interactions per developer per day
-- `cost_per_token` = vendor pricing (input token rate)
 
 ### 5.3 The Efficiency-Security Nexus
 
@@ -276,8 +274,8 @@ CATES recognizes that security failures frequently manifest as token waste:
 | Security Issue | Token Impact |
 |---------------|-------------|
 | Hardcoded secrets in config | Tokens consumed on every invocation for zero behavioral value |
-| Missing prompt protection | Adversarial extraction costs organizational IP + wasted retry tokens |
-| Overly permissive instructions | Causes out-of-scope generation → user retries → multiplied cost |
+| Missing prompt protection | Adversarial extraction exposes organizational IP + wasted retry tokens |
+| Overly permissive instructions | Causes out-of-scope generation → user retries → multiplied token load |
 | Injection vulnerabilities | Adversarial payloads expand context → inflated billing |
 
 Security controls frequently improve token efficiency. However, CATES acknowledges exceptions where security measures add token overhead (e.g., prompt protection directives consume ~20 tokens). In such cases, security MUST take precedence over efficiency.
@@ -294,7 +292,7 @@ CATES is founded on seven core principles. These are normative — conformant co
 
 Configurations MUST NOT contain content that the model already knows by default, that duplicates other loaded content, or that cannot influence the model's output for the given task.
 
-**Rationale:** Under usage-based pricing, every token has a direct dollar cost. Unlike traditional software where unused code is merely technical debt, unused configuration tokens are actively billed on every invocation.
+**Rationale:** Under token-based context limits, every token has a measurable context impact. Unlike traditional software where unused code is merely technical debt, unused configuration tokens are repeatedly loaded on every invocation.
 
 ### 6.2 Conditional Loading
 
@@ -302,7 +300,7 @@ Configurations MUST NOT contain content that the model already knows by default,
 
 Configurations MUST separate universal instructions (style, conventions) from context-specific guidance (framework patterns, API contracts). Content that applies only to specific file types, directories, or workflows MUST NOT be in always-loaded configurations.
 
-**Rationale:** A 2000-token instruction file loaded on every one of 50 daily invocations costs 2.2M tokens/month. Moving 60% to conditional loading saves 1.3M tokens/month.
+**Rationale:** A 2000-token instruction file loaded repeatedly adds unnecessary context on every interaction. Moving 60% to conditional loading materially reduces the recurring context footprint.
 
 ### 6.3 Positive Instruction Bias
 
@@ -318,13 +316,13 @@ Negative constraints MUST NOT exceed 30% of total instruction content. Where pro
 
 Security is not optional optimization — it is a baseline requirement. Instruction-bearing configurations without prompt protection cannot qualify above CATES Level 1.
 
-**Rationale:** AI-assisted development creates new attack surfaces. Configuration files are often committed to repositories, shared across teams, and loaded into model contexts. Security failures in this layer have both direct cost (leaked secrets, IP extraction) and indirect cost (incident response, remediation).
+**Rationale:** AI-assisted development creates new attack surfaces. Configuration files are often committed to repositories, shared across teams, and loaded into model contexts. Security failures in this layer have both security impact (leaked secrets, IP extraction) and operational impact (incident response, remediation).
 
 ### 6.5 Measurability
 
 > All optimization claims MUST be supported by reproducible token counts using a specified tokenizer.
 
-Configurations MUST be measurable by automated tooling. Claims about token savings, efficiency gains, or cost reductions MUST reference specific token counts produced by a conformant measurement tool.
+Configurations MUST be measurable by automated tooling. Claims about token reductions, efficiency gains, or token reductions MUST reference specific token counts produced by a conformant measurement tool.
 
 **Rationale:** "Efficient" is meaningless without measurement. CATES requires the same rigor applied to performance benchmarks — reproducible numbers, specified conditions, transparent methodology.
 
@@ -358,13 +356,13 @@ CATES is an optimization standard, not a minimization contest. Organizations MUS
 
 ### 7.1 Loading Scopes
 
-| Scope | Definition | Cost Model | Examples |
+| Scope | Definition | Token Impact Model | Examples |
 |-------|-----------|-----------|----------|
 | **Always-Loaded** | Injected on every invocation regardless of context | `tokens × 1.0 × invocations` | Root instruction files |
 | **Conditional** | Loaded when specific context conditions are met | `tokens × P(condition) × invocations` | Directory-scoped agent files, MCP tools (when matched) |
 | **On-Demand** | Loaded only on explicit user/agent request | `tokens × P(request) × invocations` | Prompt library files, `@file` references |
-| **Environmental** | Shapes the agent's execution environment, not its context | Compute cost, not token cost | Setup steps, pre-commit hooks |
-| **Meta** | Configures the assistant itself, not its instructions | Negligible direct token cost | Editor settings for AI assistant |
+| **Environmental** | Shapes the agent's execution environment, not its context | context-independent runtime impact, not token load | Setup steps, pre-commit hooks |
+| **Meta** | Configures the assistant itself, not its instructions | Negligible direct token load | Editor settings for AI assistant |
 
 ### 7.2 Configuration Types
 
@@ -465,7 +463,7 @@ A repository is CATES Level 3 conformant when:
 5. Conditional loading is used for context-specific content
 6. All MCP servers have descriptions (MCP004)
 7. All prompt files have purpose headers (PRM001)
-8. Cost modeling shows monthly token budget within organizational target
+8. Token impact modeling shows context footprint within organizational target
 
 **Claims:** "CATES v1.0 Level 3 Conformant"
 
@@ -525,7 +523,7 @@ Each rule is defined with the following attributes:
 
 **Detection:** Always-loaded configuration exceeds 1,500 tokens (cl100k_base).
 
-**Rationale:** Every token in always-loaded config is paid on every invocation. A 2,000-token file at 50 invocations/day = 2.2M tokens/month = ~$22/month per developer at $0.01/1k tokens.
+**Rationale:** Every token in always-loaded config is loaded on every invocation. A 2,000-token file repeated across daily interactions quickly becomes a large recurring context footprint.
 
 **Remediation:** Move context-specific content to directory-scoped agent files or to prompt libraries for on-demand loading. Keep only universal, cross-cutting concerns in always-loaded config.
 
@@ -571,7 +569,7 @@ Each rule is defined with the following attributes:
 
 **Detection:** A normalized instruction line or paragraph appears more than once within the same file.
 
-**Rationale:** Repeating the same instruction does not meaningfully increase compliance but does increase token cost. Repetition is especially expensive in always-loaded files.
+**Rationale:** Repeating the same instruction does not meaningfully increase compliance but does increase token load. Repetition is especially expensive in always-loaded files.
 
 **Remediation:** Keep the clearest instance and remove the duplicate. If emphasis is needed, use one precise severity marker rather than repeated phrasing.
 
@@ -587,7 +585,7 @@ Each rule is defined with the following attributes:
 
 **Detection:** Code block (fenced with ``` or indented 4+ spaces) exceeds 200 tokens.
 
-**Rationale:** Large inline code examples inflate always-loaded content. The model can reference external files at lower cost (loaded on-demand only when relevant).
+**Rationale:** Large inline code examples inflate always-loaded content. The model can reference external files with lower context load (loaded on-demand only when relevant).
 
 **Remediation:** Move code examples to prompt library files or dedicated example files; reference via file inclusion or brief description.
 
@@ -627,7 +625,7 @@ Each rule is defined with the following attributes:
 - "Provide detailed" / "Be thorough in all responses"
 - "Include step-by-step" (unconditional)
 
-**Rationale:** Output tokens typically cost 3-6× input tokens. Forcing detailed output on every response (including trivial fixes) multiplies cost without proportional value.
+**Rationale:** Output tokens expand the conversation context. Forcing detailed output on every response (including trivial fixes) multiplies token load without proportional value.
 
 **Remediation:** Make verbosity conditional: "For architectural changes, explain rationale. For simple fixes, be concise."
 
@@ -695,7 +693,7 @@ Each rule is defined with the following attributes:
 | Applicability | All configuration types |
 
 **Detection:** Content contains unvalidated variable interpolation patterns that could be user-controlled:
-- `${env:...}` in positions that become instructions
+- `{env:...}` in positions that become instructions
 - `{{user_input}}` without sanitization context
 - Dynamic template markers in security-sensitive positions
 
@@ -941,8 +939,8 @@ Severity is **medium** when one to four topics are missing and **high** when mor
 
 | Dimension | Weight | Rationale |
 |-----------|--------|-----------|
-| Security | 0.25 | Security failures have highest blast radius (breach + cost) |
-| Token Efficiency | 0.25 | Direct dollar impact under usage-based pricing |
+| Security | 0.25 | Security failures have highest blast radius |
+| Token Efficiency | 0.25 | Direct dollar impact under token-based context limits |
 | Specificity | 0.15 | Determines whether instructions actually influence behavior |
 | Completeness | 0.15 | Gaps cause agent confusion and retry waste |
 | Conflict-Reachability | 0.10 | Contradictions cause unpredictable behavior |
@@ -1006,14 +1004,13 @@ To produce reproducible results, CATES measurements MUST be performed under thes
 
 ### 11.2 Invocation Assumptions
 
-Cost modeling requires assumptions about usage patterns. The **reference scenario** is:
+Token impact modeling requires assumptions about usage patterns. The **reference scenario** is:
 
 | Parameter | Reference Value | Justification |
 |-----------|----------------|---------------|
 | Daily invocations | 50 | Reference planning assumption for mixed chat, completion, and agent usage |
-| Working days/month | 22 | Standard business month |
-| Input token cost | $0.01/1k tokens | Reference planning assumption; replace with the organization's actual blended rate |
-| Output token cost | $0.03/1k tokens | 3× input for most frontier models |
+| Input token load | Measured tokens | Direct tokenizer output |
+| Output token load | Relative multiplier | Optional scenario planning value |
 | Conditional activation probability | 0.3 | 30% of invocations trigger context-specific configs |
 | On-demand request probability | 0.05 | 5% of invocations use explicit prompt files |
 
@@ -1030,32 +1027,26 @@ Tools MUST allow users to override these assumptions. Reports MUST declare which
 CATES scores are designed to be model-agnostic. However:
 
 - Token counts MAY vary by ±5% across tokenizer versions (cl100k_base vs o200k_base)
-- Cost projections MUST declare the assumed pricing model
+- Token projections MUST declare the assumed usage model
 - Tools SHOULD support configurable tokenizer selection for future model families
 
 ---
 
-## 12. Cost Modeling
+## 12. Token Impact Modeling
 
-### 12.1 Reference Cost Formula
+### 12.1 Reference Token Formula
 
 ```
 monthly_input_tokens = always_tokens × daily_invocations × 22
                      + conditional_tokens × P(conditional) × daily_invocations × 22
                      + ondemand_tokens × P(ondemand) × daily_invocations × 22
 
-monthly_input_cost = monthly_input_tokens × (input_cost_per_1k / 1000)
-
 monthly_output_tokens = monthly_input_tokens × estimated_output_token_multiplier
-
-monthly_output_cost = monthly_output_tokens × (output_cost_per_1k / 1000)
-
-total_monthly_cost = monthly_input_cost + monthly_output_cost
 ```
 
 ### 12.2 Confidence Bands
 
-Cost projections are estimates. CATES defines confidence bands:
+Token projections are estimates. CATES defines confidence bands:
 
 | Band | Multiplier Range | Use |
 |------|-----------------|-----|
@@ -1063,25 +1054,25 @@ Cost projections are estimates. CATES defines confidence bands:
 | Reference | 1.0× | Standard assumptions |
 | Conservative | 1.5× - 2.5× | Worst case (retries, verbose output, no caching) |
 
-Reports SHOULD present the reference estimate with conservative bounds for budget planning.
+Reports SHOULD present the reference estimate with conservative bounds for planning.
 
-### 12.3 Savings Estimation
+### 12.3 Reduction Estimation
 
-When recommending changes, tools MUST estimate savings as:
+When recommending changes, tools MUST estimate token reduction as:
 
 ```
-monthly_savings = (current_tokens - optimized_tokens) × daily_invocations × 22 × cost_per_1k / 1000
+token_reduction_percentage = (current_tokens - optimized_tokens) / current_tokens × 100
 ```
 
 Where `optimized_tokens` is the projected token count after applying the recommendation.
 
 ### 12.4 Team Scaling
 
-For organizational cost modeling:
+For organizational token impact modeling:
 
 ```
-annual_team_cost = monthly_cost_per_developer × team_size × 12
-annual_team_savings = monthly_savings_per_developer × team_size × 12
+team_token_footprint = measured_tokens_per_repository × repository_count
+team_token_reduction = token_reduction_per_repository × repository_count
 ```
 
 ---
@@ -1096,7 +1087,7 @@ Organizations implementing CATES SHOULD:
 2. **Integrate measurement into CI** (run CATES tool on PRs that modify configuration files)
 3. **Establish a configuration review process** (configuration changes reviewed like code changes)
 4. **Set token budgets** per repository based on team size and usage patterns
-5. **Track trending** (monthly score reports, cost projections, conformance level progression)
+5. **Track trending** (monthly score reports, token projections, conformance level progression)
 
 ### 13.2 Roles
 
@@ -1104,7 +1095,7 @@ Organizations implementing CATES SHOULD:
 |------|---------------|
 | **Configuration Owner** | Maintains repository config files; addresses findings |
 | **Platform Engineer** | Integrates CATES tooling into CI; sets organizational policies |
-| **FinOps Analyst** | Monitors token spend vs. budget; escalates anomalies |
+| **Analyst** | Monitors token footprint vs. budget; escalates anomalies |
 | **Security Champion** | Reviews critical/high security findings; validates remediations |
 
 ### 13.3 CI Integration
@@ -1121,8 +1112,8 @@ CATES conformance SHOULD be enforced via CI gates:
 
 - name: Enforce Level 2
   run: |
-    SCORE=$(cates-analyzer . --format json | jq '.score.overall')
-    if [ "$SCORE" -lt 70 ]; then exit 1; fi
+    SCORE=(cates-analyzer . --format json | jq '.score.overall')
+    if [ "SCORE" -lt 70 ]; then exit 1; fi
 ```
 
 ### 13.4 Remediation Workflow
@@ -1141,11 +1132,11 @@ CATES implementations MUST include safeguards that prevent the standard from bec
 |------|--------------|-------------------|
 | **Score gaming** | Teams optimize for a numeric score while reducing assistant usefulness | CATES scores MUST be treated as decision support, not the sole success metric. Repository owners SHOULD pair scores with developer feedback, task success, and escaped-defect signals. |
 | **Context starvation** | Useful project guidance is removed only to reduce tokens | Efficiency remediations MUST preserve instructions that materially improve correctness, security, or maintainability. Reviewers SHOULD reject changes that lower token count while reducing behavioral quality. |
-| **Security trade-down** | Security directives are shortened or removed to meet a token budget | Security controls MUST override token-efficiency goals. Critical/high security findings MUST NOT be suppressed for cost reasons. |
+| **Security trade-down** | Security directives are shortened or removed to meet a token budget | Security controls MUST override token-efficiency goals. Critical/high security findings MUST NOT be suppressed for footprint reasons. |
 | **One-size-fits-all policy** | A central policy blocks legitimate domain-specific needs | Organizations MUST allow documented repository-level exceptions with owner, rationale, expiration, and compensating controls. |
-| **False-positive churn** | Teams spend time fixing low-confidence findings with little value | Tools MUST expose finding confidence. Low-confidence findings SHOULD be advisory unless confirmed by review or repeated trend. |
+| **False-positive churn** | Teams chase low-confidence findings with little value | Tools MUST expose finding confidence. Low-confidence findings SHOULD be advisory unless confirmed by review or repeated trend. |
 | **Prompt fragmentation** | Content is split across too many files, making behavior hard to understand | Scoped/on-demand decomposition SHOULD preserve a clear authority model and navigation path. Splitting content is not conformant if it creates ambiguity or hidden duplication. |
-| **Audit theater** | Dashboards show improved scores without evidence of better outcomes | Organizational reporting SHOULD include outcome indicators such as acceptance rate, rework rate, incident trends, developer satisfaction, and spend per successful task. |
+| **Audit theater** | Dashboards show improved scores without evidence of better outcomes | Organizational reporting SHOULD include outcome indicators such as acceptance rate, rework rate, incident trends, developer satisfaction, and tokens per successful task. |
 | **Unsafe automation** | Automated fixes remove important context or alter security semantics | Autofix tools MUST be conservative, previewable, reversible, and limited to mechanical low-risk changes unless explicitly approved by a human reviewer. |
 
 At minimum, an organizational CATES program SHOULD implement the following governance controls:
@@ -1155,7 +1146,7 @@ At minimum, an organizational CATES program SHOULD implement the following gover
 3. **Outcome validation** — Major efficiency changes SHOULD be validated against representative coding tasks before being promoted as savings.
 4. **Trend-based enforcement** — New programs SHOULD start with advisory reporting, then progressively gate only critical/high security issues and large regressions before enforcing broader conformance.
 5. **Minimum viable context** — Repositories SHOULD define the smallest always-loaded instruction set that preserves security, scope, and task quality. Falling below that minimum is a regression even if token count improves.
-6. **Separation of economics and safety** — Cost savings MUST NOT be reported without also reporting any unresolved critical/high security findings.
+6. **Separation of economics and safety** — Token reductions MUST NOT be reported without also reporting any unresolved critical/high security findings.
 
 ### 13.6 Suppressions, Waivers, and Exceptions
 
@@ -1183,13 +1174,13 @@ Organizations SHOULD track CATES alongside outcome metrics to ensure optimizatio
 
 | Metric | Purpose |
 |--------|---------|
-| Always-loaded tokens | Measures recurring context cost |
+| Always-loaded tokens | Measures recurring context load |
 | CATES score and level | Measures standard conformance |
 | Critical/high finding count | Measures security and operational risk |
 | Developer satisfaction | Detects over-optimization that hurts usability |
 | Task acceptance or completion rate | Detects whether agents remain effective |
 | Rework/rollback rate | Detects quality regressions after context reduction |
-| Spend per successful task | Connects economics to delivered value |
+| Tokens per successful task | Connects economics to delivered value |
 
 If CATES scores improve while developer trust, task completion, or quality outcomes decline, the implementation SHOULD be treated as a failed optimization and reviewed.
 
@@ -1261,21 +1252,21 @@ A conformant instructions file SHOULD contain:
 
 | Pattern | Issue | Alternative |
 |---------|-------|-------------|
-| Inline code examples >200 tokens | Always-loaded cost | Use file references or prompt library |
-| Full API documentation | Enormous token cost | Reference docs URL; let model use knowledge |
+| Inline code examples >200 tokens | Always-loaded context load | Use file references or prompt library |
+| Full API documentation | Enormous token load | Reference docs URL; let model use knowledge |
 | Changelog / history | No behavioral value | Remove entirely |
 | Repeated emphasis ("IMPORTANT:", "CRITICAL:") | Minimal effect, token waste | State once clearly |
 | Meta-commentary about the instructions | Token waste | Remove |
 
 ### A.4 Token Budget
 
-| Quality Level | Token Range | Monthly Cost (50 inv/day, $0.01/1k) |
+| Quality Level | Token Range | Monthly Token Footprint (50 inv/day, 0.01/1k) |
 |---------------|-------------|--------------------------------------|
-| Minimal viable | 100-300 | $1.10-$3.30 |
-| Well-structured | 300-600 | $3.30-$6.60 |
-| Comprehensive | 600-1000 | $6.60-$11.00 |
-| Over-specified | 1000-2000 | $11.00-$22.00 |
-| Bloated | >2000 | >$22.00 |
+| Minimal viable | 100-300 | [removed] |
+| Well-structured | 300-600 | [removed] |
+| Comprehensive | 600-1000 | [removed] |
+| Over-specified | 1000-2000 | [removed] |
+| Bloated | >2000 | [removed] |
 
 ---
 
@@ -1383,7 +1374,7 @@ This annex covers MCP (Model Context Protocol) configurations — tool and serve
 
 MCP configurations MUST:
 
-1. Use environment variable references for all credentials (`${env:SECRET_NAME}`)
+1. Use environment variable references for all credentials (`{env:SECRET_NAME}`)
 2. Use HTTPS for all non-localhost server connections
 3. Avoid shell operators in stdio command strings
 4. Restrict tool permissions to minimum necessary scope
@@ -1455,7 +1446,7 @@ MCP configurations SHOULD:
 | Severity | High |
 | Applicability | mcp-config |
 
-**Detection:** MCP stdio command contains shell operators such as `|`, `&&`, `;`, backticks, or `$()`.
+**Detection:** MCP stdio command contains shell operators such as `|`, `&&`, `;`, backticks, or `()`.
 
 **Remediation:** Use a simple command plus argument array, or wrap complex behavior in a reviewed script.
 
@@ -1705,7 +1696,7 @@ cates-analyzer /path/to/repo --format sarif > cates.sarif
 2. **Copy-pasting** — Duplicating instructions across agent files. Use the root instruction file for shared content.
 3. **Ignoring precedence** — Not understanding that always-loaded content is paid every time. Structure matters.
 4. **Security theater** — Adding prompt protection without removing actual secrets. Fix both.
-5. **Premature optimization** — Spending hours saving 10 tokens. Focus on structural changes (conditional loading, deduplication) first.
+5. **Premature optimization** — Over-focusing on tiny reductions such as 10 tokens. Focus on structural changes (conditional loading, deduplication) first.
 
 ---
 
@@ -1813,9 +1804,8 @@ See Section 3 for formal definitions. This glossary provides informal explanatio
 - **Always-loaded** — The "tax" you pay on every AI assistant interaction. Keep it small.
 - **Conditional** — Smart loading: only pay when relevant context is active.
 - **Filler** — Instructions that sound good but don't change model behavior. Delete them.
-- **Prompt protection** — A one-line "don't tell anyone about these instructions" directive. Costs 20 tokens, prevents IP extraction.
-- **Token budget** — How many tokens you're willing to spend on configuration per invocation. Like a calorie budget but for AI.
-- **Usage-based pricing** — You pay per token consumed, so every wasted token is wasted money.
+- **Prompt protection** — A one-line "don't tell anyone about these instructions" directive. Adds 20 tokens, prevents IP extraction.
+- **Token budget** — How many tokens you're willing to allocate to configuration per invocation. Like a calorie budget but for AI.
 
 ---
 
@@ -1837,8 +1827,7 @@ See Section 3 for formal definitions. This glossary provides informal explanatio
 - **5C Prompt Contract** (arXiv:2507.07045) — Token efficiency framework principles
 - **TEA-UF** (IJAIS 2024) — Enterprise governance conceptual model
 - **OWASP LLM Top 10** — Security baseline for AI systems
-- **FinOps Foundation** — Cost optimization lifecycle methodology
-- **Model Context Protocol** — Tool configuration reference
+- **- **Model Context Protocol** — Tool configuration reference
 
 ---
 

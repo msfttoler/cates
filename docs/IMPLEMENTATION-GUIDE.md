@@ -24,12 +24,9 @@ minScore: 80
 requireLevel: 2
 failOn: [critical, high]
 maxAlwaysLoadedTokens: 1500
-assumedDailyInvocations: 50
-assumedModelCostPer1kTokens: 0.01
 suppressions:
   - ruleId: SEC004
     file: generated/agent-doc.md
     reason: Generated documentation, not loaded by any agent
     expires: 2026-12-31
 ```
-

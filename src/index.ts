@@ -9,7 +9,7 @@
  * Core design principles:
  * 1. Zero LLM calls for deterministic scoring (dogfooding token efficiency)
  * 2. Sandboxed file reads with adversarial hardening
- * 3. Real tokenizer-based cost modeling (js-tiktoken)
+ * 3. Real tokenizer-based context measurement (js-tiktoken)
  * 4. Config precedence awareness (which files are always-loaded vs conditional)
  */
 
