@@ -8,23 +8,48 @@ This is the reference implementation for the **Coding Agent Token Economics Stan
 
 ## 🚀 Quick Start
 
+### Install
+
+CATES is distributed as an npm package and a Docker image. Pick one:
+
 ```bash
-# Analyze current directory
+# 1) Run it once with npx (nothing to install)
 npx cates-analyzer .
 
+# 2) Install globally (recommended for repeat use)
+npm install -g cates-analyzer
+cates-analyzer .
+
+# 3) Add it as a dev dependency in a project
+npm install --save-dev cates-analyzer
+npx cates-analyzer .
+
+# 4) Run it in Docker (no Node.js required locally)
+docker run --rm -v "$PWD:/work" ghcr.io/msfttoler/cates:latest .
+```
+
+Requires Node.js **>= 20** for the npm install paths. The Docker image
+ships its own runtime plus `git` and `gh`.
+
+### Use it
+
+```bash
+# Analyze current directory
+cates-analyzer .
+
 # Analyze a specific repo
-npx cates-analyzer /path/to/repo
+cates-analyzer /path/to/repo
 
 # JSON output for CI
-npx cates-analyzer . --format json
+cates-analyzer . --format json
 
 # SARIF output for code scanning systems
-npx cates-analyzer . --format sarif
+cates-analyzer . --format sarif
 
 # Review a GitHub repository, branch folder, file, or pull request
-npx cates-analyzer review https://github.com/OWNER/REPO
-npx cates-analyzer review https://github.com/OWNER/REPO/tree/main/path/to/folder
-npx cates-analyzer review https://github.com/OWNER/REPO/pull/123
+cates-analyzer review https://github.com/OWNER/REPO
+cates-analyzer review https://github.com/OWNER/REPO/tree/main/path/to/folder
+cates-analyzer review https://github.com/OWNER/REPO/pull/123
 ```
 
 When running from this source checkout before publishing/installing the package, use one of these forms:
@@ -96,6 +121,163 @@ az deployment group create \
 
 Schedule, manual, and event-triggered modes are all supported. Full
 walkthrough in [`deploy/aca/README.md`](deploy/aca/README.md).
+
+## ✨ Features at a Glance
+
+| Capability | What you get |
+|---|---|
+| **Zero-LLM static analysis** | Deterministic, fast, no API keys, no data exfiltration |
+| **30+ rules** across 6 dimensions | Token efficiency, security, specificity, completeness, conflict/reachability, harness quality |
+| **Per-family tokenizers** | OpenAI `cl100k`, OpenAI `o200k`, Anthropic Claude, or an offline approximation — pick one or compare side-by-side |
+| **Multi-surface discovery** | Instructions, prompt libraries, MCP configs, hooks, setup steps, editor settings |
+| **Configurable** | Toggle any rule or whole dimension on/off, override severities, suppress with reasons + expirations |
+| **Multiple output formats** | Human-readable text, JSON, **SARIF** for GitHub Advanced Security and other scanners |
+| **CI-ready gates** | `--min-score`, `--require-level`, `--fail-on`, `--max-always-loaded` |
+| **Conformance levels** | Score against CATES Level 1, 2, or 3 |
+| **GitHub-native review** | `cates-analyzer review <url>` for repos, branches, folders, files, or PRs (uses local `gh` credentials) |
+| **Portfolio scanning** | Roll up many repos into one report |
+| **Demo mode** | 100-repo built-in manifest (Microsoft, GitHub, Anthropic, broader OSS) |
+| **Safe autofix** | `--fix` / `--fix-dry-run` for mechanical, reviewable changes |
+| **Token economics** | Per-finding token impact + conservative and projected savings estimates |
+| **Hardened runtime** | Sandboxed reads, size/depth limits, binary detection, no network calls |
+| **Multiple ship targets** | npm CLI, Docker image, Helm chart for AKS, Bicep template for Azure Container Apps |
+
+## ⚙️ Configuring CATES
+
+CATES is policy-driven. Drop a `.cates.yml`, `.cates.yaml`, or `.cates.json`
+at your repo root (or pass `--policy <path>`) and you can:
+
+- Set CI quality gates (`minScore`, `requireLevel`, `failOn`,
+  `maxAlwaysLoadedTokens`)
+- **Toggle any individual rule on/off**
+- **Toggle an entire dimension on/off** (e.g. skip all security rules
+  because your org already uses GitHub Advanced Security)
+- **Override the severity** of any rule or dimension
+- Suppress specific findings (with required reasons and optional
+  expirations)
+
+Both YAML and JSON are accepted. A minimal annotated example:
+
+```yaml
+# .cates.yml — full schema
+minScore: 80
+requireLevel: 1
+failOn: [critical]
+maxAlwaysLoadedTokens: 1500
+
+# ─── Whole-dimension toggles ─────────────────────────────────────────
+# Disable an entire category of rules in one line. Useful when another
+# tool already covers it (e.g., GHAS for secret scanning / code scanning).
+dimensions:
+  security: off              # skip CATES SEC* and security-tagged MCP/STP rules
+  # token-efficiency: off
+  # specificity: off
+  # completeness: off
+  # conflict-reachability: off
+  # harness-quality: off
+
+# ─── Per-rule toggles & severity overrides ───────────────────────────
+# Most specific wins: rules[<id>] > dimensions[<dim>] > built-in defaults.
+# Shorthand:  off | on | <severity>   (critical|high|medium|low|info)
+# Long form:  { enabled: true|false, severity: <severity> }
+rules:
+  SEC001: off                # disable a single rule
+  TE004: low                 # downgrade Forced Verbosity from high to low
+  MCP002: on                 # re-enable one rule even though `security: off`
+  CMP002: { severity: high } # long form
+
+# ─── Suppressions (for documented false positives / accepted risk) ───
+suppressions:
+  - ruleId: SEC004
+    file: .github/copilot-instructions.md
+    reason: Covered by organization-level prompt protection
+    owner: @platform-team
+    expires: 2026-12-31
+```
+
+The same shape works as JSON:
+
+```json
+{
+  "minScore": 80,
+  "dimensions": { "security": "off" },
+  "rules": { "SEC001": "off", "TE004": "low" }
+}
+```
+
+> **Tip — GHAS users:** set `dimensions.security: off` and let GitHub
+> Advanced Security own secret scanning and code scanning. CATES will
+> still score token efficiency, specificity, completeness, conflicts, and
+> harness quality, and any individual security rule you want to keep
+> (e.g. `MCP002`, `SEC005`) can be re-enabled with `rules.<ID>: on`.
+
+Disabled rules and dimensions are reported in the JSON output under
+`disabledFindings`, `disabledRuleIds`, and `disabledDimensions` so you
+can audit exactly what was filtered.
+
+## 🧭 So... What's Next?
+
+Once you have a report, here's how to drive the score up:
+
+### 1. Triage in this order
+
+1. **Critical findings first** — almost always `SEC001` (hardcoded secrets)
+   or `MCP002` (secrets in MCP config). Rotate the credential, then remove
+   it from history and move it behind an env var / secret manager.
+2. **High-severity security & token waste** — `SEC003` (overly permissive
+   scope), `SEC005` (system-prompt leakage), `TE004` (forced verbosity),
+   `TE006` (cross-file duplication).
+3. **Token budget breach** — if `TE001` fires, your always-loaded config
+   is over the 1,500-token budget. Move conditional or rarely-used
+   guidance into scoped instruction files or on-demand prompt files.
+4. **Specificity & completeness** — replace vague language (`SPC001`) with
+   concrete file paths, commands, and decision criteria; add the missing
+   essential topics flagged by `CMP002`.
+
+### 2. Use the built-in helpers
+
+```bash
+# Explain any rule, including the CATES section it maps to and how to fix it
+cates-analyzer explain SEC003
+cates-analyzer explain TE004
+
+# Apply mechanical, reviewable fixes (only rules marked autofix-safe)
+cates-analyzer . --fix-dry-run     # preview
+cates-analyzer . --fix             # apply
+
+# Re-run with a stricter gate to confirm the fix
+cates-analyzer . --min-score 85 --fail-on critical,high
+```
+
+### 3. Adopt the configuration loop
+
+- Commit a `.cates.yml` so the policy is reviewed like code.
+- If a rule is genuinely not applicable (e.g. you use GHAS), **disable
+  it** in `.cates.yml` rather than ignoring it everywhere.
+- If a finding is a known false positive, **suppress it** with a reason
+  and (ideally) an `expires` date — the suppression report tells you
+  when those expire.
+- Wire CATES into CI with `--format sarif` and upload to GitHub code
+  scanning, or `--format json` and feed it into your own dashboards.
+
+### 4. Refactor toward the CATES recommendations
+
+Every report contains a `recommendations` block, prioritized and
+estimated in tokens saved per invocation. Start at priority 1 and work
+down — each item lists the affected files, the safety classification,
+and whether it's autofixable.
+
+### 5. Track progress over time
+
+```bash
+# Compare scores across runs by saving JSON reports per commit
+cates-analyzer . --format json > reports/$(git rev-parse --short HEAD).json
+```
+
+For multi-repo views use `cates-analyzer portfolio <path>` or the demo
+manifest (`cates-analyzer demo --limit 25`).
+
+
 
 ## 📊 What It Scores
 
@@ -273,6 +455,21 @@ cates-analyzer explain TE004
 | CMP003 | Completeness | Low | Single oversized config file |
 | CNF001 | Conflicts | High | Contradictory instructions |
 | CNF002 | Harness | Medium | Missing harness elements |
+
+## 🔖 Versioning & Releases
+
+This package follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
+Releases are automated by
+[release-please](https://github.com/googleapis/release-please) from
+[Conventional Commits](https://www.conventionalcommits.org/) on `main`:
+
+- `feat:` → MINOR bump
+- `fix:` / `perf:` → PATCH bump
+- `feat!:` or `BREAKING CHANGE:` → MAJOR bump
+
+The full policy (including how the CATES standard document is versioned
+separately from the analyzer) is in [`VERSIONING.md`](./VERSIONING.md), and
+all releases are recorded in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## License
 
