@@ -64,6 +64,12 @@ export function parseGitHubLink(input: string): GitHubLink | undefined {
   const repo = repoPart.endsWith('.git') ? repoPart.slice(0, -4) : repoPart;
   if (!repo) return undefined;
 
+  // Defense against argument injection into git/gh argv (CWE-88).
+  // GitHub itself forbids these characters in owner/repo names, so anything
+  // that fails here is either malformed or hostile.
+  assertSafeGitHubIdentifier(owner, 'owner', input);
+  assertSafeGitHubIdentifier(repo, 'repository name', input);
+
   if (mode === 'pull') {
     const pullNumber = Number(rest[0]);
     if (!Number.isInteger(pullNumber) || pullNumber <= 0) {
@@ -75,16 +81,56 @@ export function parseGitHubLink(input: string): GitHubLink | undefined {
   if (mode === 'tree' || mode === 'blob') {
     const ref = rest[0];
     if (!ref) throw new Error(`GitHub ${mode} URL is missing a branch, tag, or commit ref: ${input}`);
+    assertSafeGitRef(ref, input);
+    const subpath = rest.slice(1).join('/');
+    if (subpath) assertSafeSubpath(subpath, input);
     return {
       owner,
       repo,
       ref,
-      subpath: rest.slice(1).join('/'),
+      subpath,
       fileMode: mode === 'blob',
     };
   }
 
   return { owner, repo };
+}
+
+function assertSafeGitHubIdentifier(value: string, label: string, input: string): void {
+  // GitHub usernames and repo names are alphanumerics, hyphen, underscore, dot.
+  // Reject anything that could be parsed as a CLI flag or shell metacharacter.
+  if (!/^[A-Za-z0-9._-]+$/.test(value) || value.startsWith('-') || value.includes('..')) {
+    throw new Error(`Refusing unsafe GitHub ${label} in URL: ${input}`);
+  }
+}
+
+function assertSafeGitRef(ref: string, input: string): void {
+  // Git refs cannot legally start with '-', and we additionally block ASCII
+  // characters that have meaning to shells, gh, or argument parsers even
+  // though spawn() is called with shell: false. This blocks --upload-pack
+  // and similar argument-injection vectors (cf. CVE-2017-1000117).
+  if (
+    ref.startsWith('-') ||
+    ref.includes('..') ||
+    ref.includes(' ') ||
+    /[\\\0\n\r\t<>|;&$`"']/.test(ref) ||
+    !/^[A-Za-z0-9._/-]+$/.test(ref)
+  ) {
+    throw new Error(`Refusing unsafe git ref in URL: ${input}`);
+  }
+}
+
+function assertSafeSubpath(subpath: string, input: string): void {
+  // Subpaths are later joined onto the cloned repo and re-checked by
+  // assertInside(), but reject obviously hostile shapes early.
+  if (
+    subpath.startsWith('-') ||
+    subpath.startsWith('/') ||
+    subpath.includes('..') ||
+    /[\0\n\r]/.test(subpath)
+  ) {
+    throw new Error(`Refusing unsafe subpath in URL: ${input}`);
+  }
 }
 
 async function materializeGitHubSource(

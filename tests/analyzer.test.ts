@@ -436,5 +436,43 @@ describe('CATES Analyzer', () => {
         pullNumber: 123,
       });
     });
+
+    describe('rejects argv-injection-shaped URLs (CWE-88)', () => {
+      it('throws on a ref that starts with - (e.g. --upload-pack)', () => {
+        expect(() =>
+          parseGitHubLink('https://github.com/example/repo/tree/--upload-pack=evil'),
+        ).toThrow(/unsafe git ref/i);
+      });
+
+      it('throws on a ref with shell metacharacters', () => {
+        expect(() =>
+          parseGitHubLink('https://github.com/example/repo/tree/main;rm%20-rf%20%2F'),
+        ).toThrow(/unsafe git ref/i);
+      });
+
+      it('throws on a ref containing ..', () => {
+        expect(() =>
+          parseGitHubLink('https://github.com/example/repo/tree/..%2F..%2Fetc'),
+        ).toThrow(/unsafe git ref/i);
+      });
+
+      it('throws on an owner that starts with -', () => {
+        expect(() =>
+          parseGitHubLink('https://github.com/-evil/repo'),
+        ).toThrow(/unsafe GitHub owner/i);
+      });
+
+      it('throws on a repo name that starts with -', () => {
+        expect(() =>
+          parseGitHubLink('https://github.com/example/-evil'),
+        ).toThrow(/unsafe GitHub repository name/i);
+      });
+
+      it('throws on a subpath with .. traversal', () => {
+        expect(() =>
+          parseGitHubLink('https://github.com/example/repo/tree/main/..%2F..%2Fetc'),
+        ).toThrow(/unsafe subpath/i);
+      });
+    });
   });
 });
