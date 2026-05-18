@@ -38,7 +38,13 @@ export async function loadPolicy(repoPath: string, explicitPath?: string): Promi
   if (!policyPath) return {};
 
   const content = await readFile(policyPath, 'utf-8');
-  const parsed = policyPath.endsWith('.json') ? JSON.parse(content) : parseYaml(content);
+  let parsed: unknown;
+  try {
+    parsed = policyPath.endsWith('.json') ? JSON.parse(content) : parseYaml(content);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to parse CATES policy file ${policyPath}: ${reason}`);
+  }
   return normalizePolicy(parsed ?? {});
 }
 
