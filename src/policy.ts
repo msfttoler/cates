@@ -2,7 +2,15 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
-import type { Severity, Suppression } from './types.js';
+import type { Dimension, Severity, Suppression } from './types.js';
+
+export interface RuleOverride {
+  enabled?: boolean;
+  severity?: Severity;
+}
+
+export type RuleConfigMap = Record<string, RuleOverride>;
+export type DimensionConfigMap = Partial<Record<Dimension, RuleOverride>>;
 
 export interface CatesPolicy {
   minScore?: number;
@@ -10,6 +18,8 @@ export interface CatesPolicy {
   failOn?: Severity[];
   maxAlwaysLoadedTokens?: number;
   suppressions?: Suppression[];
+  rules?: RuleConfigMap;
+  dimensions?: DimensionConfigMap;
 }
 
 export const DEFAULT_POLICY: Required<Pick<CatesPolicy, 'minScore' | 'requireLevel' | 'failOn' | 'maxAlwaysLoadedTokens'>> = {
@@ -43,7 +53,65 @@ function normalizePolicy(value: unknown): CatesPolicy {
     suppressions: Array.isArray(input['suppressions'])
       ? input['suppressions'].filter(isSuppression)
       : undefined,
+    rules: parseRuleMap(input['rules']),
+    dimensions: parseDimensionMap(input['dimensions']),
   };
+}
+
+function parseRuleMap(value: unknown): RuleConfigMap | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const out: RuleConfigMap = {};
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    const override = parseOverride(raw);
+    if (override) out[key.toUpperCase()] = override;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function parseDimensionMap(value: unknown): DimensionConfigMap | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const out: DimensionConfigMap = {};
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    if (!isDimension(key)) continue;
+    const override = parseOverride(raw);
+    if (override) out[key] = override;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function parseOverride(value: unknown): RuleOverride | undefined {
+  // Shorthand: off / false / "disabled" disables; on / true / "enabled" enables.
+  if (value === false || value === 'off' || value === 'disabled' || value === 'disable') {
+    return { enabled: false };
+  }
+  if (value === true || value === 'on' || value === 'enabled' || value === 'enable') {
+    return { enabled: true };
+  }
+  // Shorthand: severity string downgrades/upgrades severity.
+  if (typeof value === 'string' && isSeverity(value)) {
+    return { severity: value };
+  }
+  if (value && typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    const override: RuleOverride = {};
+    if (typeof obj['enabled'] === 'boolean') override.enabled = obj['enabled'];
+    if (typeof obj['severity'] === 'string' && isSeverity(obj['severity'])) {
+      override.severity = obj['severity'];
+    }
+    return Object.keys(override).length > 0 ? override : undefined;
+  }
+  return undefined;
+}
+
+function isDimension(value: string): value is Dimension {
+  return (
+    value === 'token-efficiency' ||
+    value === 'security' ||
+    value === 'specificity' ||
+    value === 'completeness' ||
+    value === 'conflict-reachability' ||
+    value === 'harness-quality'
+  );
 }
 
 function asNumber(value: unknown): number | undefined {

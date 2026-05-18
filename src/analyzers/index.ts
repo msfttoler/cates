@@ -12,6 +12,7 @@ import { calculateScore } from '../scoring/calculator.js';
 import { generateRecommendations } from '../scoring/recommendations.js';
 import { calculateSavings } from '../scoring/savings.js';
 import { applySuppressions } from '../suppressions.js';
+import { applyRuleConfig } from '../rule-config.js';
 
 /**
  * Main analysis orchestrator.
@@ -83,7 +84,13 @@ async function analyzeWithContext(options: AnalyzerOptions): Promise<AnalysisRes
     ...hookFindings,
     ...editorFindings,
   ];
-  const suppressionResult = applySuppressions(rawFindings, options.suppressions);
+  // Apply rule/dimension toggles BEFORE suppressions so disabled rules never
+  // contribute to scoring, gating, or counts.
+  const ruleConfigResult = applyRuleConfig(rawFindings, {
+    rules: options.rules,
+    dimensions: options.dimensions,
+  });
+  const suppressionResult = applySuppressions(ruleConfigResult.findings, options.suppressions);
 
   // Phase 3: Score
   const score = calculateScore(suppressionResult.findings, discovery);
@@ -102,5 +109,8 @@ async function analyzeWithContext(options: AnalyzerOptions): Promise<AnalysisRes
     suppressedFindings: suppressionResult.suppressedFindings,
     suppressionSummary: suppressionResult.summary,
     recommendations,
+    disabledFindings: ruleConfigResult.disabledFindings,
+    disabledRuleIds: ruleConfigResult.disabledRuleIds,
+    disabledDimensions: ruleConfigResult.disabledDimensions,
   };
 }

@@ -92,7 +92,12 @@ program
       const repoPath = resolve(path);
       const format = formatOpt(opts.format, ['pretty', 'json']);
       const policy = await loadPolicy(repoPath, stringOpt(opts.policy));
-      const result = await analyze({ repoPath, suppressions: policy.suppressions ?? [] });
+      const result = await analyze({
+        repoPath,
+        suppressions: policy.suppressions ?? [],
+        rules: policy.rules ?? {},
+        dimensions: policy.dimensions ?? {},
+      });
       const conformance = evaluateConformance(result, { ...policy, requireLevel: parseLevel(opts.requireLevel) });
       if (format === 'json') {
         process.stdout.write(JSON.stringify({ repoPath, conformance }, null, 2) + '\n');
@@ -276,6 +281,8 @@ function buildAnalyzeOptions(
     tokenizer: tokenizerOpt(opts.tokenizer),
     compareTokenizers: tokenizerListOpt(opts.compareTokenizers),
     suppressions: policy.suppressions ?? [],
+    rules: policy.rules ?? {},
+    dimensions: policy.dimensions ?? {},
   };
 }
 

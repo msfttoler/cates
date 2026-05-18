@@ -124,6 +124,9 @@ export interface AnalysisResult {
   suppressedFindings: Finding[];
   suppressionSummary: SuppressionSummary;
   recommendations: Recommendation[];
+  disabledFindings?: Finding[];
+  disabledRuleIds?: string[];
+  disabledDimensions?: Dimension[];
 }
 
 export interface Recommendation {
@@ -161,6 +164,24 @@ export const AnalyzerOptionsSchema = z.object({
     expires: z.string().min(1).optional(),
     owner: z.string().min(1).optional(),
   })).default([]),
+  rules: z.record(z.string(), z.object({
+    enabled: z.boolean().optional(),
+    severity: z.enum(['critical', 'high', 'medium', 'low', 'info']).optional(),
+  })).default({}),
+  dimensions: z.record(
+    z.enum([
+      'token-efficiency',
+      'security',
+      'specificity',
+      'completeness',
+      'conflict-reachability',
+      'harness-quality',
+    ]),
+    z.object({
+      enabled: z.boolean().optional(),
+      severity: z.enum(['critical', 'high', 'medium', 'low', 'info']).optional(),
+    }),
+  ).default({}),
 });
 
 export type AnalyzerOptions = z.infer<typeof AnalyzerOptionsSchema>;

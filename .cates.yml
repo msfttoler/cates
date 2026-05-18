@@ -7,3 +7,21 @@ assumedDailyInvocations: 50
 assumedModelCostPer1kTokens: 0.01
 suppressions: []
 
+# ─── Rule & Dimension Toggles ────────────────────────────────────────────────
+# Turn rules on/off, or override their severity. Most specific wins:
+#   rules[<id>]  >  dimensions[<dimension>]  >  built-in defaults
+#
+# Shorthand values: off | on | <severity> (critical | high | medium | low | info)
+# Long form:        { enabled: true|false, severity: <severity> }
+#
+# Example (uncomment to use):
+#
+# dimensions:
+#   security: off            # e.g. you're a GHAS customer — skip CATES SEC* rules
+#
+# rules:
+#   SEC003: low              # shorthand severity (critical|high|medium|low|info)
+#   TE004: { severity: low } # long form
+#   MCP002: on               # re-enable a single rule even though `security` is off
+
+
