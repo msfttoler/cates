@@ -422,39 +422,111 @@ npx tsx src/cli/index.ts ./fixtures/bad   # Test against bad config
 npx tsx src/cli/index.ts ./fixtures/good  # Test against good config
 ```
 
-## 📋 Rule Reference
+## 📋 Complete Rule Reference
 
-This is an abbreviated reference. The complete machine-readable catalog is available with:
+All **42 rules** in the analyzer's catalog, grouped by dimension and sorted
+by severity. The same data is available programmatically:
 
 ```bash
-cates-analyzer rules --format json
-cates-analyzer explain TE004
+cates-analyzer rules --format json     # full machine-readable catalog
+cates-analyzer explain SEC003          # full detail + remediation for one rule
 ```
 
-| Rule | Dimension | Severity | Description |
-|------|-----------|----------|-------------|
-| SEC001 | Security | Critical | Secrets/credentials in config |
-| SEC002 | Security | High | Prompt injection vectors |
-| SEC003 | Security | High | Overly permissive grants |
-| SEC004 | Security | Medium | Missing prompt protection |
-| SEC005 | Security | High | System prompt leakage |
-| SEC006 | Security | High | Unsafe command patterns |
-| TE001 | Token Efficiency | Medium | Always-loaded config >1,500 tokens |
-| TE002 | Token Efficiency | Medium | Verbose code examples (>200 tokens) |
-| TE003 | Token Efficiency | Low | Generic filler (platform defaults) |
-| TE004 | Token Efficiency | High | Forced verbosity patterns |
-| TE005 | Token Efficiency | Medium | Negative constraint spam |
-| TE006 | Token Efficiency | High | Cross-file duplication |
-| TE007 | Token Efficiency | Medium | Duplicated instructions within a file |
-| SPC001 | Specificity | Medium | Vague/unactionable instructions |
-| SPC002 | Specificity | Medium | No project-specific context |
-| SPC003 | Specificity | Low | No architecture documentation |
-| SPC004 | Specificity | Low | Long abstract blocks without examples |
-| CMP001 | Completeness | High | No configuration found |
-| CMP002 | Completeness | Medium | Missing essential topics |
-| CMP003 | Completeness | Low | Single oversized config file |
-| CNF001 | Conflicts | High | Contradictory instructions |
-| CNF002 | Harness | Medium | Missing harness elements |
+Use the [`⚙️ Configuring CATES`](#%EF%B8%8F-configuring-cates) section to
+turn any rule on/off or override its severity in `.cates.yml`.
+
+> **Legend:** Severity follows CATES §9. **Autofix ✅** means
+> `cates-analyzer . --fix` can apply a safe, mechanical change for this
+> rule; `—` means the fix is manual.
+
+### 🔐 Security (12 rules)
+
+| Rule | Title | Severity | CATES § | Autofix |
+|---|---|---|---|---|
+| MCP002 | Secrets in MCP Configuration | Critical | Annex C | — |
+| SEC001 | Hardcoded Secrets | Critical | 9.3 | — |
+| MCP003 | Insecure MCP Endpoint | High | Annex C | — |
+| MCP005 | Shell Operators in MCP Command | High | Annex C | — |
+| SEC002 | Injection Vectors | High | 9.3 | — |
+| SEC003 | Overly Permissive Scope | High | 9.3 | — |
+| SEC005 | System Prompt Leakage Risk | High | 9.3 | — |
+| SEC006 | Unsafe Execution Patterns | High | 9.3 | — |
+| STP001 | Pipe-to-Shell Setup Pattern | High | Annex D | — |
+| SEC004 | Missing Prompt Protection | Medium | 9.3 | ✅ |
+| STP003 | Broad Setup Permissions | Medium | Annex D | — |
+| HK003 | Outdated Hook Version | Low | Annex E | — |
+
+### ⚡ Token Efficiency (10 rules)
+
+| Rule | Title | Severity | CATES § | Autofix |
+|---|---|---|---|---|
+| TE004 | Forced Verbosity | High | 9.2 | — |
+| TE006 | Cross-File Duplication | High | 9.2 | — |
+| PRM002 | Oversized Prompt File | Medium | Annex B | — |
+| TE001 | Excessive Always-Loaded Token Count | Medium | 9.2 | — |
+| TE002 | Excessive Inline Code Examples | Medium | 9.2 | — |
+| TE005 | Negative Constraint Spam | Medium | 9.2 | — |
+| TE007 | Within-File Duplicate Instructions | Medium | 9.2 | ✅ |
+| HK002 | Heavy Hook Operation | Low | Annex E | — |
+| STP002 | Missing Dependency Caching | Low | Annex D | — |
+| TE003 | Generic Filler Instructions | Low | 9.2 | — |
+
+### 🎯 Specificity (7 rules)
+
+| Rule | Title | Severity | CATES § | Autofix |
+|---|---|---|---|---|
+| SPC001 | Vague Language | Medium | 9.4 | — |
+| SPC002 | Missing Project Context | Medium | 9.4 | — |
+| MCP004 | Missing MCP Server Descriptions | Low | Annex C | — |
+| PRM001 | Missing Prompt Purpose Header | Low | Annex B | ✅ |
+| PRM003 | Excessive Hardcoded File Paths | Low | Annex B | — |
+| SPC003 | Missing Architecture Structure | Low | 9.4 | — |
+| SPC004 | Long Abstract Instruction Block | Low | 9.4 | — |
+
+### 📚 Completeness (10 rules)
+
+| Rule | Title | Severity | CATES § | Autofix |
+|---|---|---|---|---|
+| CMP001 | No Configuration Content | High | 9.5 | — |
+| CMP002 | Missing Essential Topics | Medium | 9.5 | — |
+| MCP001 | Invalid MCP Config Syntax | Medium | Annex C | — |
+| STP004 | Missing Test Framework Setup | Medium | Annex D | — |
+| CMP003 | Monolithic Configuration File | Low | 9.5 | — |
+| EDC001 | Invalid Editor Settings Syntax | Low | Annex F | — |
+| EDC002 | AI Assistance Disabled Broadly | Low | Annex F | — |
+| PRM004 | No Variables in Large Prompt | Low | Annex B | — |
+| PRM005 | Prompt Library Sprawl | Low | Annex B | — |
+| STP005 | Missing Linter Setup | Low | Annex D | — |
+
+### ⚔️ Conflict & Reachability (2 rules)
+
+| Rule | Title | Severity | CATES § | Autofix |
+|---|---|---|---|---|
+| CNF001 | Contradictory Instructions | High | 9.6 | — |
+| HK001 | Interactive Hook | Medium | Annex E | — |
+
+### 🛡️ Harness Quality (1 rule)
+
+| Rule | Title | Severity | CATES § | Autofix |
+|---|---|---|---|---|
+| CNF002 | Missing Harness Element | Medium | 9.6 | — |
+
+### Rule ID prefixes
+
+| Prefix | Surface |
+|---|---|
+| `SEC` | Core security checks across all configuration |
+| `TE`  | Token-efficiency / waste pattern checks |
+| `SPC` | Specificity / actionability checks |
+| `CMP` | Completeness / topic-coverage checks |
+| `CNF` | Conflict & reachability checks |
+| `PRM` | Prompt-file checks (CATES Annex B) |
+| `MCP` | MCP configuration checks (CATES Annex C) |
+| `STP` | Setup-step checks (CATES Annex D) |
+| `HK`  | Hook checks (CATES Annex E) |
+| `EDC` | Editor configuration checks (CATES Annex F) |
+
+
 
 ## 🔖 Versioning & Releases
 
