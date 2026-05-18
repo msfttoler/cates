@@ -1,5 +1,5 @@
 import { resolve, relative, isAbsolute } from 'node:path';
-import { readdir, stat, readFile, realpath } from 'node:fs/promises';
+import { readdir, stat, realpath, open } from 'node:fs/promises';
 import type { DiscoveredFile, DiscoveryResult, ConfigType, ConfigScope, AnalyzerOptions } from '../types.js';
 import { countTokens, countTokensAcross, getDefaultTokenizer, type TokenizerId } from '../utils/tokenizer.js';
 
@@ -105,37 +105,46 @@ export async function discoverFiles(options: AnalyzerOptions): Promise<Discovery
       throw new Error(`Discovered file escapes repository boundary: ${relativePath}`);
     }
 
-    // Security: enforce size limit
-    const fileStat = await stat(realFullPath);
-    if (fileStat.size > options.maxFileSize) {
+    // Open once and reuse the same file descriptor for stat + read so the file
+    // cannot be swapped between the size check and the contents read (TOCTOU,
+    // CWE-367). Mitigates `js/file-system-race`.
+    const fh = await open(realFullPath, 'r');
+    try {
+      const fileStat = await fh.stat();
+
+      // Security: enforce size limit
+      if (fileStat.size > options.maxFileSize) {
+        files.push({
+          path: realFullPath,
+          relativePath,
+          type: match.type,
+          scope: match.scope,
+          sizeBytes: fileStat.size,
+          tokenCount: 0,
+          isActive: false, // too large = likely not a real config
+        });
+        return;
+      }
+
+      // Security: skip binary files
+      const content = await fh.readFile('utf-8');
+      if (isBinary(content)) return;
+
+      const tokenCount = countTokens(content, tokenizer);
+
       files.push({
         path: realFullPath,
         relativePath,
         type: match.type,
         scope: match.scope,
         sizeBytes: fileStat.size,
-        tokenCount: 0,
-        isActive: false, // too large = likely not a real config
+        tokenCount,
+        isActive: true,
       });
-      return;
+      if (compareSet) activeContents.push(content);
+    } finally {
+      await fh.close();
     }
-
-    // Security: skip binary files
-    const content = await readFile(realFullPath, 'utf-8');
-    if (isBinary(content)) return;
-
-    const tokenCount = countTokens(content, tokenizer);
-
-    files.push({
-      path: realFullPath,
-      relativePath,
-      type: match.type,
-      scope: match.scope,
-      sizeBytes: fileStat.size,
-      tokenCount,
-      isActive: true,
-    });
-    if (compareSet) activeContents.push(content);
   }
 
   async function discoverIncludedFiles(includeFiles: string[]): Promise<void> {

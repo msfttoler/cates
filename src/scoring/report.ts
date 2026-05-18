@@ -260,9 +260,9 @@ function coverageRows(result: AnalysisResult): Array<{ label: string; present: b
   const countType = (type: string) => files.filter(file => file.type === type).length;
   return [
     { label: 'Copilot', present: hasPath(/^\.github\/copilot|^\.github\/prompts|^\.github\/copilot-instructions\.md$/), detail: `${files.filter(file => file.relativePath.startsWith('.github/')).length} GitHub config file(s)` },
-    { label: 'Claude', present: hasPath(/(^|\/)\.claude\/|(^|\/)CLAUDE\.md$/i), detail: `${files.filter(file => /\.claude\/|CLAUDE\.md$/i.test(file.relativePath)).length} Claude file(s)` },
-    { label: 'Cursor', present: hasPath(/(^|\/)\.cursor\/|\.cursorrules$/i), detail: `${files.filter(file => /\.cursor\/|\.cursorrules$/i.test(file.relativePath)).length} Cursor file(s)` },
-    { label: 'Gemini', present: hasPath(/(^|\/)\.gemini\/|(^|\/)GEMINI\.md$/i), detail: `${files.filter(file => /\.gemini\/|GEMINI\.md$/i.test(file.relativePath)).length} Gemini file(s)` },
+    { label: 'Claude', present: hasPath(/(?:^|\/)\.claude\/|(?:^|\/)CLAUDE\.md$/i), detail: `${files.filter(file => /\.claude\//i.test(file.relativePath) || /CLAUDE\.md$/i.test(file.relativePath)).length} Claude file(s)` },
+    { label: 'Cursor', present: hasPath(/(?:^|\/)\.cursor\/|(?:^|\/)\.cursorrules$/i), detail: `${files.filter(file => /\.cursor\//i.test(file.relativePath) || /\.cursorrules$/i.test(file.relativePath)).length} Cursor file(s)` },
+    { label: 'Gemini', present: hasPath(/(?:^|\/)\.gemini\/|(?:^|\/)GEMINI\.md$/i), detail: `${files.filter(file => /\.gemini\//i.test(file.relativePath) || /GEMINI\.md$/i.test(file.relativePath)).length} Gemini file(s)` },
     { label: 'MCP', present: countType('mcp-config') > 0, detail: `${countType('mcp-config')} MCP config(s)` },
     { label: 'Hooks', present: countType('hooks-config') > 0, detail: `${countType('hooks-config')} hook config(s)` },
     { label: 'Setup', present: countType('setup-steps') > 0, detail: `${countType('setup-steps')} setup config(s)` },
