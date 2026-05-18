@@ -349,6 +349,58 @@ describe('CATES Analyzer', () => {
     });
   });
 
+  describe('Tokenizer registry', () => {
+    it('counts the same text differently per tokenizer family', async () => {
+      const { countTokens, listTokenizers } = await import('../src/utils/tokenizer.js');
+      const text = 'The quick brown fox jumps over the lazy dog. Hello, world! 你好世界 🚀';
+      const ids = listTokenizers().map(t => t.id);
+      const counts = Object.fromEntries(ids.map(id => [id, countTokens(text, id)]));
+
+      for (const id of ids) expect(counts[id]).toBeGreaterThan(0);
+      // o200k_base packs multi-byte tokens more efficiently than cl100k_base
+      expect(counts['openai-o200k']).toBeLessThanOrEqual(counts['openai-cl100k']!);
+    });
+
+    it('honors --tokenizer in analyze()', async () => {
+      const cl = await analyze({ repoPath: resolve(FIXTURES, 'good'), tokenizer: 'openai-cl100k' });
+      const o2 = await analyze({ repoPath: resolve(FIXTURES, 'good'), tokenizer: 'openai-o200k' });
+      const cla = await analyze({ repoPath: resolve(FIXTURES, 'good'), tokenizer: 'anthropic-claude' });
+
+      expect(cl.discovery.tokenizer).toBe('openai-cl100k');
+      expect(o2.discovery.tokenizer).toBe('openai-o200k');
+      expect(cla.discovery.tokenizer).toBe('anthropic-claude');
+      expect(cl.discovery.totalTokens).toBeGreaterThan(0);
+      // Different tokenizers should generally produce different totals for
+      // non-trivial content. (Strict inequality avoids a flaky exact match.)
+      const totals = new Set([cl.discovery.totalTokens, o2.discovery.totalTokens, cla.discovery.totalTokens]);
+      expect(totals.size).toBeGreaterThan(1);
+    });
+
+    it('emits a side-by-side comparison when compareTokenizers is set', async () => {
+      const result = await analyze({
+        repoPath: resolve(FIXTURES, 'good'),
+        tokenizer: 'openai-cl100k',
+        compareTokenizers: ['openai-o200k', 'anthropic-claude', 'approx'],
+      });
+
+      expect(result.discovery.totalTokensByTokenizer).toBeDefined();
+      const map = result.discovery.totalTokensByTokenizer!;
+      expect(map['openai-cl100k']).toBe(result.discovery.totalTokens);
+      expect(map['openai-o200k']).toBeGreaterThan(0);
+      expect(map['anthropic-claude']).toBeGreaterThan(0);
+      expect(map['approx']).toBeGreaterThan(0);
+    });
+
+    it('rejects invalid tokenizer ids via CLI', () => {
+      const result = spawnSync(process.execPath, [TSX_CLI, 'src/cli/index.ts', 'fixtures/good', '--tokenizer', 'nope'], {
+        cwd: REPO_ROOT,
+        encoding: 'utf-8',
+      });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('--tokenizer must be one of');
+    });
+  });
+
   describe('Review sources', () => {
     it('parses GitHub repository URLs', () => {
       expect(parseGitHubLink('https://github.com/example/repo')).toEqual({

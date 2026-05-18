@@ -1,5 +1,6 @@
 import type { AnalyzerOptions, AnalysisResult, Finding } from '../types.js';
 import { AnalyzerOptionsSchema } from '../types.js';
+import { withTokenizer, getDefaultTokenizer } from '../utils/tokenizer.js';
 import { discoverFiles } from './discovery.js';
 import { analyzeTokenEfficiency } from './token-efficiency.js';
 import { analyzeSecurity } from './security.js';
@@ -18,7 +19,11 @@ import { applySuppressions } from '../suppressions.js';
  */
 export async function analyze(rawOptions: Partial<AnalyzerOptions> & { repoPath: string }): Promise<AnalysisResult> {
   const options = AnalyzerOptionsSchema.parse(rawOptions);
+  const tokenizer = options.tokenizer ?? getDefaultTokenizer();
+  return withTokenizer(tokenizer, () => analyzeWithContext(options));
+}
 
+async function analyzeWithContext(options: AnalyzerOptions): Promise<AnalysisResult> {
   // Phase 1: Discovery (secure file enumeration)
   const discovery = await discoverFiles(options);
 

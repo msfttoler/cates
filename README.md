@@ -126,9 +126,23 @@ This tool is hardened against adversarial configs:
 This tool practices what it preaches:
 
 - **Zero LLM calls** for core scoring — pure heuristic-based analysis
-- **Real tokenizer** (`cl100k_base` via `js-tiktoken`) for accurate context measurement
+- **Real tokenizers per model family**:
+  - `openai-cl100k` (default) — GPT-3.5, GPT-4, GPT-4 Turbo
+  - `openai-o200k` — GPT-4o, o1, o3, o4 series
+  - `anthropic-claude` — Claude (BPE; exact for Claude 2, approximation for Claude 3+)
+  - `approx` — offline character heuristic
 - **Config precedence awareness** — knows which files are always-loaded vs conditional
 - **Token reduction projections** with conservative direct-token reduction and projected retry/tool-call reduction percentages
+
+Pick one for scoring with `--tokenizer`, or compare side-by-side with `--compare-tokenizers`:
+
+```bash
+cates-analyzer . --tokenizer anthropic-claude
+cates-analyzer . --compare-tokenizers openai-cl100k,openai-o200k,anthropic-claude
+cates-analyzer tokenizers                # list supported tokenizers
+```
+
+The default tokenizer can also be set via `CATES_TOKENIZER=anthropic-claude`.
 
 ## 📁 Files It Discovers
 
@@ -154,6 +168,7 @@ Usage:
   cates-analyzer explain <ruleId>
   cates-analyzer portfolio [options] [path]
   cates-analyzer demo [options]
+  cates-analyzer tokenizers [options]
 
 Common analyze options:
   -f, --format <format>       pretty, json, sarif
@@ -162,6 +177,8 @@ Common analyze options:
   --require-level <n>         require CATES Level 1, 2, or 3
   --fail-on <list>            e.g. critical,high
   --max-always-loaded <n>     token budget gate
+  --tokenizer <name>          openai-cl100k (default), openai-o200k, anthropic-claude, approx
+  --compare-tokenizers <list> side-by-side counts, e.g. openai-cl100k,anthropic-claude
   --files <list>              comma-separated relative files to analyze
   --individual                score each --files entry separately
   --fix / --fix-dry-run       safe mechanical fixes

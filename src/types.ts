@@ -102,6 +102,14 @@ export interface DiscoveryResult {
   alwaysLoadedTokens: number;
   conditionalTokens: number;
   deadFileTokens: number;
+  /** Canonical tokenizer used to compute the counts above. */
+  tokenizer?: string;
+  /**
+   * Optional side-by-side totals across additional tokenizers. Populated
+   * when AnalyzerOptions.compareTokenizers is set. Always includes the
+   * canonical tokenizer so reports can render a single table.
+   */
+  totalTokensByTokenizer?: Record<string, number>;
 }
 
 // ─── Analysis Types ──────────────────────────────────────────────────────────
@@ -144,6 +152,8 @@ export const AnalyzerOptionsSchema = z.object({
   maxFiles: z.number().int().positive().default(50),
   maxDepth: z.number().int().nonnegative().default(5),
   includeFiles: z.array(z.string().min(1)).optional(),
+  tokenizer: z.enum(['openai-cl100k', 'openai-o200k', 'anthropic-claude', 'approx']).optional(),
+  compareTokenizers: z.array(z.enum(['openai-cl100k', 'openai-o200k', 'anthropic-claude', 'approx'])).optional(),
   suppressions: z.array(z.object({
     ruleId: z.string().min(1),
     file: z.string().min(1).optional(),

@@ -45,13 +45,23 @@ function toPretty(result: AnalysisResult): string {
   // Discovery Summary
   lines.push('  📁 Files Discovered:');
   lines.push(`     ${discovery.files.length} config file(s) found`);
-  lines.push(`     ${discovery.totalTokens.toLocaleString()} total tokens in active configs`);
+  lines.push(`     ${discovery.totalTokens.toLocaleString()} total tokens in active configs${discovery.tokenizer ? ` (${discovery.tokenizer})` : ''}`);
   lines.push(`     ${discovery.alwaysLoadedTokens.toLocaleString()} tokens always-loaded`);
   if (discovery.conditionalTokens > 0) {
     lines.push(`     ${discovery.conditionalTokens.toLocaleString()} tokens conditional`);
   }
   if (discovery.deadFileTokens > 0) {
     lines.push(`     ${discovery.deadFileTokens.toLocaleString()} tokens in dead/unreachable files`);
+  }
+  if (discovery.totalTokensByTokenizer && Object.keys(discovery.totalTokensByTokenizer).length > 1) {
+    lines.push('');
+    lines.push('  🔢 Tokenizer Comparison (active configs):');
+    const base = discovery.tokenizer ?? Object.keys(discovery.totalTokensByTokenizer)[0]!;
+    const baseCount = discovery.totalTokensByTokenizer[base] || 1;
+    for (const [id, count] of Object.entries(discovery.totalTokensByTokenizer)) {
+      const delta = id === base ? '(baseline)' : `${((count / baseCount - 1) * 100).toFixed(1)}% vs ${base}`;
+      lines.push(`     ${padRight(id, 22)} ${count.toLocaleString().padStart(10)} tokens   ${delta}`);
+    }
   }
   lines.push('');
 

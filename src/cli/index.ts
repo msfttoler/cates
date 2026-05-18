@@ -12,6 +12,7 @@ import { scanPortfolio } from '../portfolio.js';
 import { resolveReviewSource } from '../sources.js';
 import { DEFAULT_DEMO_REPOSITORIES, type DemoCategory } from '../demo-repos.js';
 import { scanDemo, type DemoScanResult } from '../demo.js';
+import { isTokenizerId, listTokenizers, type TokenizerId } from '../utils/tokenizer.js';
 import type { AnalysisResult, Severity } from '../types.js';
 
 program
@@ -52,6 +53,8 @@ program
   .option('--require-level <n>', 'Fail unless CATES conformance level is at least 1, 2, or 3')
   .option('--fail-on <list>', 'Comma-separated severities that fail the run (e.g. critical,high)')
   .option('--max-always-loaded <n>', 'Fail if always-loaded tokens exceed this value')
+  .option('--tokenizer <name>', 'Canonical tokenizer: openai-cl100k, openai-o200k, anthropic-claude, approx')
+  .option('--compare-tokenizers <list>', 'Comma-separated tokenizers to report side-by-side (e.g. openai-cl100k,anthropic-claude)')
   .option('--fix', 'Apply safe automatic fixes')
   .option('--fix-dry-run', 'Show safe automatic fixes without writing files')
   .action(async (path: string, opts) => runAnalyze(path, opts));
@@ -71,6 +74,8 @@ program
   .option('--require-level <n>', 'Fail unless CATES conformance level is at least 1, 2, or 3')
   .option('--fail-on <list>', 'Comma-separated severities that fail the run (e.g. critical,high)')
   .option('--max-always-loaded <n>', 'Fail if always-loaded tokens exceed this value')
+  .option('--tokenizer <name>', 'Canonical tokenizer: openai-cl100k, openai-o200k, anthropic-claude, approx')
+  .option('--compare-tokenizers <list>', 'Comma-separated tokenizers to report side-by-side')
   .option('--keep-worktree', 'Keep temporary clone after reviewing GitHub sources')
   .option('--no-gh', 'Use git directly instead of gh for GitHub sources')
   .action(async (source: string, opts) => runReview(source, opts));
@@ -132,6 +137,29 @@ program
       process.exit(1);
     }
     process.stdout.write(`${rule.id} — ${rule.title}\n\nDimension: ${rule.dimension}\nSeverity: ${rule.severity}\nCATES section: ${rule.catesSection}\n\n${rule.summary}\n\nDetection: ${rule.detection}\n\nRemediation: ${rule.remediation}\n`);
+  });
+
+program
+  .command('tokenizers')
+  .description('List supported tokenizers')
+  .option('-f, --format <format>', 'Output format: pretty or json', 'pretty')
+  .action((opts) => {
+    try {
+      const format = formatOpt(opts.format, ['pretty', 'json']);
+      const all = listTokenizers();
+      if (format === 'json') {
+        process.stdout.write(JSON.stringify(all, null, 2) + '\n');
+      } else {
+        for (const t of all) {
+          process.stdout.write(`${t.id}  ${t.displayName}\n`);
+          if (t.models.length) process.stdout.write(`    models: ${t.models.join(', ')}\n`);
+          if (t.notes) process.stdout.write(`    note:   ${t.notes}\n`);
+        }
+      }
+    } catch (err) {
+      console.error('Error:', err instanceof Error ? err.message : err);
+      process.exit(1);
+    }
   });
 
 program
@@ -245,6 +273,8 @@ function buildAnalyzeOptions(
     maxFiles: numberOpt(opts.maxFiles, '--max-files', { min: 1, integer: true }) ?? 50,
     maxDepth: numberOpt(opts.maxDepth, '--max-depth', { min: 0, integer: true }) ?? 5,
     includeFiles: includeFiles.length > 0 ? includeFiles : undefined,
+    tokenizer: tokenizerOpt(opts.tokenizer),
+    compareTokenizers: tokenizerListOpt(opts.compareTokenizers),
     suppressions: policy.suppressions ?? [],
   };
 }
@@ -420,6 +450,27 @@ function isDemoCategory(value: string): value is DemoCategory {
 
 function isSeverity(value: string): value is Severity {
   return value === 'critical' || value === 'high' || value === 'medium' || value === 'low' || value === 'info';
+}
+
+function tokenizerOpt(value: unknown): TokenizerId | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (typeof value !== 'string') {
+    throw new Error('--tokenizer must be a string.');
+  }
+  if (!isTokenizerId(value)) {
+    throw new Error(`--tokenizer must be one of: ${listTokenizers().map(t => t.id).join(', ')}.`);
+  }
+  return value;
+}
+
+function tokenizerListOpt(value: unknown): TokenizerId[] | undefined {
+  if (typeof value !== 'string' || value.trim().length === 0) return undefined;
+  const values = value.split(',').map(v => v.trim()).filter(v => v.length > 0);
+  const invalid = values.filter(v => !isTokenizerId(v));
+  if (invalid.length > 0) {
+    throw new Error(`--compare-tokenizers contains invalid entries: ${invalid.join(', ')}. Allowed: ${listTokenizers().map(t => t.id).join(', ')}.`);
+  }
+  return values.filter(isTokenizerId);
 }
 
 program.parse();

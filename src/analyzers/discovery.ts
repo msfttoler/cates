@@ -1,7 +1,7 @@
 import { resolve, relative, isAbsolute } from 'node:path';
 import { readdir, stat, readFile, realpath } from 'node:fs/promises';
 import type { DiscoveredFile, DiscoveryResult, ConfigType, ConfigScope, AnalyzerOptions } from '../types.js';
-import { countTokens } from '../utils/tokenizer.js';
+import { countTokens, countTokensAcross, getDefaultTokenizer, type TokenizerId } from '../utils/tokenizer.js';
 
 /**
  * Securely discovers coding-agent configuration files in a repository.
@@ -91,6 +91,11 @@ type FileClassification = { type: ConfigType; scope: ConfigScope };
 export async function discoverFiles(options: AnalyzerOptions): Promise<DiscoveryResult> {
   const repoRoot = await realpath(resolve(options.repoPath));
   const files: DiscoveredFile[] = [];
+  const activeContents: string[] = []; // retained only when comparison is requested
+  const tokenizer: TokenizerId = options.tokenizer ?? getDefaultTokenizer();
+  const compareSet: TokenizerId[] | undefined = options.compareTokenizers && options.compareTokenizers.length > 0
+    ? Array.from(new Set<TokenizerId>([tokenizer, ...options.compareTokenizers]))
+    : undefined;
   let filesScanned = 0;
 
   async function addFile(fullPath: string, relativePath: string, match: FileClassification): Promise<void> {
@@ -119,7 +124,7 @@ export async function discoverFiles(options: AnalyzerOptions): Promise<Discovery
     const content = await readFile(realFullPath, 'utf-8');
     if (isBinary(content)) return;
 
-    const tokenCount = countTokens(content);
+    const tokenCount = countTokens(content, tokenizer);
 
     files.push({
       path: realFullPath,
@@ -130,6 +135,7 @@ export async function discoverFiles(options: AnalyzerOptions): Promise<Discovery
       tokenCount,
       isActive: true,
     });
+    if (compareSet) activeContents.push(content);
   }
 
   async function discoverIncludedFiles(includeFiles: string[]): Promise<void> {
@@ -220,12 +226,25 @@ export async function discoverFiles(options: AnalyzerOptions): Promise<Discovery
     .filter(f => !f.isActive)
     .reduce((sum, f) => sum + f.tokenCount, 0);
 
+  let totalTokensByTokenizer: Record<string, number> | undefined;
+  if (compareSet) {
+    const totals: Record<string, number> = {};
+    for (const id of compareSet) totals[id] = 0;
+    for (const content of activeContents) {
+      const counts = countTokensAcross(content, compareSet);
+      for (const id of compareSet) totals[id]! += counts[id];
+    }
+    totalTokensByTokenizer = totals;
+  }
+
   return {
     files,
     totalTokens: activeFiles.reduce((sum, f) => sum + f.tokenCount, 0),
     alwaysLoadedTokens,
     conditionalTokens,
     deadFileTokens,
+    tokenizer,
+    ...(totalTokensByTokenizer ? { totalTokensByTokenizer } : {}),
   };
 }
 
